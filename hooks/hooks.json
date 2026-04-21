@@ -1,0 +1,17 @@
+{
+  "description": "On SessionStart, materialize (or tear down) the per-repo gitmoji commit-msg hook from the current plugin version, driven by the effective gitmoji.enabled setting.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/session-materialize.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

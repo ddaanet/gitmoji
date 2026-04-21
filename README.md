@@ -1,8 +1,8 @@
 # gitmoji
 
 Commit-msg git hook that replaces conventional-commit prefixes with
-[gitmoji](https://gitmoji.dev/) emojis. Ships as a Claude Code plugin with
-install / uninstall commands.
+[gitmoji](https://gitmoji.dev/) emojis. Ships as a Claude Code plugin
+with settings-driven opt-in.
 
 ## What it does
 
@@ -30,37 +30,44 @@ Install the plugin from the `ddaanet` marketplace:
 /plugin install gitmoji@ddaanet
 ```
 
-Then install the hook into the current repository:
+Then opt the current repo in:
 
 ```
 /gitmoji:install
 ```
 
-To uninstall the hook (the plugin stays installed, only the repo-level
-hook is removed):
+This writes `gitmoji.enabled: true` into `.claude/settings.json`
+(checked in — every teammate gets the hook on their next Claude Code
+session). The plugin's SessionStart hook re-materializes the
+`.git/hooks/commit-msg` wrapper from the current plugin version on
+every session, so plugin upgrades propagate with zero per-repo work.
+
+Opt the repo out:
 
 ```
 /gitmoji:uninstall
 ```
 
-### Manual install
+### Opt-in scopes
 
-Without the plugin command, run the script directly from a clone of this
-repo:
+`gitmoji.enabled` is resolved from Claude Code's standard settings
+hierarchy (more specific wins):
 
-```
-bash scripts/install-hook.sh
-```
+1. `.claude/settings.local.json` (this repo, per-user, gitignored)
+2. `.claude/settings.json` (this repo, checked in) — where the slash
+   commands write
+3. `~/.claude/settings.json` (your user defaults)
 
-Or use the justfile: `just install`.
+To opt in **everywhere**, set `"gitmoji": {"enabled": true}` in
+`~/.claude/settings.json`. To opt out in one repo, set it to `false` in
+`.claude/settings.local.json`.
 
 ## Safety
 
-The installer refuses to overwrite an existing `commit-msg` hook unless
-it was installed by this plugin (detected via a marker comment in the
-hook). Move or remove the existing hook first.
-
-The uninstaller only removes files carrying the marker.
+`.git/hooks/` files are treated as a cache, not state. The materializer
+only touches files carrying a `gitmoji-plugin-installed` marker — an
+existing `commit-msg` hook without the marker is left alone and the
+materializer prints a notice so you can move it manually.
 
 ## Prefix → emoji mapping
 
@@ -78,8 +85,14 @@ The uninstaller only removes files carrying the marker.
 | `chore`    | 🔧    | Add or update configuration files |
 | `revert`   | ⏪️    | Revert changes |
 | `hotfix`   | 🚑️    | Critical hotfix |
+| `release`  | 🔖    | Release / version tags |
 
 Edit `scripts/gitmoji.cfg` to customise.
+
+## Dependencies
+
+`jq` on `PATH`. The installer, uninstaller, and SessionStart
+materializer use it to read and edit `.claude/settings.json`.
 
 ## License
 

@@ -18,38 +18,77 @@ A plugin gets:
 
 - Distribution via the `ddaanet` marketplace (discoverable, versioned)
 - Slash-command UI (`/gitmoji:install`) for a one-shot setup
+- A SessionStart hook we can use to keep per-repo state in sync with the
+  plugin version
 - Clean coupling between the hook scripts and the installer (same repo,
   `${CLAUDE_PLUGIN_ROOT}` resolves at runtime)
 - Uninstall path with an explicit marker
 
 What it does *not* need:
 
-- A Claude Code hook. This plugin ships a *git* hook, not a Claude Code
-  hook. The plugin's hooks directory stays empty.
-- A skill. The action is a one-shot user-triggered setup; a slash command
-  is the simpler fit. "Skill shines when the agent decides when to run;
-  command wins for user-triggered setup."
+- A skill. The action is user-triggered setup; a slash command is the
+  simpler fit.
 
-## Decomposition
+## Opt-in model
 
-- **`commands/install.md`**: the user-facing trigger. Content tells the
-  agent to run `${CLAUDE_PLUGIN_ROOT}/scripts/install-hook.sh`.
-- **`scripts/install-hook.sh`**: deterministic installer. Locates git
-  root, copies `gitmoji.sh` + `gitmoji.cfg` to `.git/hooks/`, writes a
-  wrapper `commit-msg` hook that execs the copied `gitmoji.sh`.
-- **`scripts/gitmoji.sh`**: the hook itself. Lifted verbatim from
-  `devddaanet/scripts/gitmoji.sh`. Source of truth now lives here.
-- **`scripts/gitmoji.cfg`**: prefix → emoji mapping. Lifted verbatim.
-- **`scripts/uninstall-hook.sh`**: mirror of the installer. Only touches
-  files carrying the plugin-installed marker.
+**Opt-in lives in `.claude/settings.json`, not in `.git/hooks/`.** Hook
+files are not git-tracked, so a cloned repo that "wants gitmoji" cannot
+signal that through `.git/hooks/`. A checked-in `.claude/settings.json`
+with `gitmoji.enabled: true` is the correct source of truth — it
+travels with the repo.
+
+The effective value of `gitmoji.enabled` is read across the standard
+Claude Code hierarchy (more specific wins):
+
+1. `.claude/settings.local.json` (repo, per-user, gitignored)
+2. `.claude/settings.json` (repo, checked in)
+3. `~/.claude/settings.json` (user)
+
+Managed (enterprise) and CLI overrides sit above these, inherited from
+Claude Code's normal precedence rules.
+
+## Materialization
+
+On every Claude Code session, `hooks/hooks.json` fires the SessionStart
+event, which runs `scripts/session-materialize.sh`. That script:
+
+1. Resolves the repo root from `${CLAUDE_PROJECT_DIR}`.
+2. Reads `gitmoji.enabled` from the hierarchy above.
+3. If `true`: copies `gitmoji.sh` + `gitmoji.cfg` into `.git/hooks/`
+   and writes a marker-tagged `commit-msg` wrapper.
+4. If `false` or unset: removes any marker-tagged hook files.
+5. Refuses to stomp a `commit-msg` that lacks the marker.
+
+Per-repo hook files are thus a **cache**, regenerated from the plugin
+version running in the current session. Plugin upgrades propagate
+automatically: the next SessionStart rewrites `.git/hooks/` from the
+new version.
+
+The slash commands `/gitmoji:install` and `/gitmoji:uninstall` are
+thin wrappers that toggle `gitmoji.enabled` in project-scope
+`.claude/settings.json` and then invoke the materializer immediately
+(so the user doesn't have to wait for the next session to see the
+effect).
+
+## Requirements this design meets
+
+- **Automatic on plugin update.** SessionStart re-materializes from the
+  current plugin version on every session. No manual per-repo action.
+- **Transparent.** Users never see the mechanics — they set a settings
+  entry (via slash command or manually) and the hook appears.
+- **Safe when project-local plugin versions differ.** Each repo's
+  `.git/hooks/` are rewritten only by sessions opened on that repo,
+  using whichever plugin version that session sees. Repos do not share
+  any state, so mixed versions across repos never conflict.
+- **Git-tracked opt-in.** `.claude/settings.json` travels with the
+  repo, so fresh clones auto-materialize on first session.
 
 ## Safety rules
 
 - **Marker-based idempotence.** The wrapper `commit-msg` hook contains a
-  `gitmoji-plugin-installed` comment. The installer refuses to overwrite
-  anything without that marker; the uninstaller refuses to remove
-  anything without it. This prevents stomping on unrelated
-  user-configured hooks.
+  `gitmoji-plugin-installed` comment. The materializer refuses to
+  overwrite anything without that marker; teardown refuses to remove
+  anything without it.
 - **Lowercase-only conventional prefixes.** The regex `^([a-z]+):\ (.*)`
   is intentional. Mixed-case or dotted prefixes are rejected with a
   helpful message listing valid prefixes, not silently mangled.
@@ -58,6 +97,28 @@ What it does *not* need:
   hook on the same message is safe.
 - **Merge/squash/amend skipping.** The hook exits 0 for these source
   types, so the plugin never corrupts merge commit messages.
+
+## Dependencies
+
+- `jq` is required. The installer, uninstaller, and materializer use it
+  to read and edit settings JSON. Scripts fail with a clear message if
+  `jq` is missing.
+
+## Decomposition
+
+- **`commands/install.md`** / **`commands/uninstall.md`**: user-facing
+  slash commands. Each invokes the corresponding script under
+  `${CLAUDE_PLUGIN_ROOT}/scripts/`.
+- **`hooks/hooks.json`**: registers the SessionStart hook that invokes
+  `session-materialize.sh`.
+- **`scripts/session-materialize.sh`**: single entry point for
+  writing/removing per-repo hook files based on the effective
+  `gitmoji.enabled` setting. Idempotent.
+- **`scripts/install-hook.sh`** / **`scripts/uninstall-hook.sh`**:
+  toggle `gitmoji.enabled` in project-scope `.claude/settings.json` and
+  invoke the materializer.
+- **`scripts/gitmoji.sh`** / **`scripts/gitmoji.cfg`**: the hook body
+  and prefix mapping. Source of truth for both lives here.
 
 ## Relationship to upstream devddaanet
 
@@ -79,9 +140,7 @@ place, the source of truth migrates here:
 
 ## Open questions
 
-- Should the plugin additionally expose the hook via a Claude Code hook
-  for automatic install on session start? Probably not — that would
-  silently modify every repo the user opens in Claude Code. Keeping it
-  explicit (user runs `/gitmoji:install`) preserves consent.
 - Should `gitmoji.cfg` be editable without forking? A `~/.gitmoji.cfg`
   override could be supported; deferred until there is demand.
+- Could the materializer do anything useful when Claude Code is opened
+  on a non-git directory? Currently it silently exits. Probably fine.

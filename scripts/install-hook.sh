@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
-# Install the gitmoji commit-msg hook into the current git repository.
+# Opt this repo in to the gitmoji commit-msg hook by writing
+# `gitmoji.enabled = true` into project-scope .claude/settings.json, then
+# materializing the hook immediately. Settings is the source of truth —
+# the plugin's SessionStart hook keeps .git/hooks/ in sync on every
+# session (so plugin upgrades propagate transparently).
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
+
+if ! command -v jq >/dev/null 2>&1; then
+    echo "gitmoji: jq is required (used to edit settings.json)" >&2
+    exit 1
+fi
 
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [[ -z "$repo_root" ]]; then
@@ -10,27 +19,15 @@ if [[ -z "$repo_root" ]]; then
     exit 1
 fi
 
-hooks_dir="$repo_root/.git/hooks"
-target="$hooks_dir/commit-msg"
-marker="gitmoji-plugin-installed"
-
-mkdir -p "$hooks_dir"
-
-if [[ -f "$target" ]] && ! grep -q "$marker" "$target" 2>/dev/null; then
-    echo "existing commit-msg hook at $target" >&2
-    echo "move or remove it first to avoid overwriting" >&2
-    exit 1
+settings="$repo_root/.claude/settings.json"
+mkdir -p "$(dirname "$settings")"
+tmp="$(mktemp)"
+if [[ -f "$settings" ]]; then
+    jq '.gitmoji.enabled = true' "$settings" > "$tmp"
+else
+    jq -n '{gitmoji: {enabled: true}}' > "$tmp"
 fi
+mv "$tmp" "$settings"
+echo "set gitmoji.enabled = true in $settings"
 
-cp "$script_dir/gitmoji.sh"  "$hooks_dir/gitmoji.sh"
-cp "$script_dir/gitmoji.cfg" "$hooks_dir/gitmoji.cfg"
-chmod +x "$hooks_dir/gitmoji.sh"
-
-cat > "$target" <<EOF
-#!/usr/bin/env bash
-# $marker
-exec "\$(dirname "\$0")/gitmoji.sh" "\$@"
-EOF
-chmod +x "$target"
-
-echo "installed commit-msg hook at $target"
+CLAUDE_PROJECT_DIR="$repo_root" bash "$script_dir/session-materialize.sh"

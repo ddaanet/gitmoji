@@ -1,0 +1,17 @@
+# Claude Code sandbox artifacts
+.bash_profile
+.bashrc
+.gitconfig
+.gitmodules
+.mcp.json
+.profile
+.ripgreprc
+.zprofile
+.zshrc
+.idea
+.vscode
+
+# Claude Code per-user / ephemeral state
+.claude/settings.local.json
+.claude/handoff.md
+.claude/handoff-task.md
