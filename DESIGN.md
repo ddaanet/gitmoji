@@ -3,7 +3,7 @@
 Living document. Captures the research, analysis, and decisions behind
 this plugin. Updated as the design evolves.
 
-Last updated: 2026-04-20.
+Last updated: 2026-04-23.
 
 ## Problem
 
