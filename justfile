@@ -38,8 +38,10 @@ test msg="feat: add a thing":
     bash scripts/gitmoji.sh "$tmp" || { echo "hook failed"; exit 1; }
     echo "output: $(cat "$tmp")"
 
-# Create release: bump plugin.json version, commit, tag, push, GH release
-release bump='patch': validate
+# Create release: bump plugin.json version, commit, tag, push, GH release.
+# Pass `--yes` as the second arg to skip the interactive confirmation
+# (useful when an outer permission layer already gates the command).
+release bump='patch' yes='': validate
     #!/usr/bin/env bash
     set -euo pipefail
     manifest=".claude-plugin/plugin.json"
@@ -56,13 +58,15 @@ release bump='patch': validate
     ' "$manifest")
     tag="v$new_version"
     git rev-parse "$tag" >/dev/null 2>&1 && { echo "error: tag $tag already exists" >&2; exit 1; }
-    read -rp "Release $new_version? [y/N] " answer
-    case "$answer" in y|Y) ;; *) exit 1 ;; esac
+    if [ "{{yes}}" != "--yes" ]; then
+        read -rp "Release $new_version? [y/N] " answer
+        case "$answer" in y|Y) ;; *) exit 1 ;; esac
+    fi
     tmp=$(mktemp)
     jq --arg v "$new_version" '.version = $v' "$manifest" > "$tmp"
     mv "$tmp" "$manifest"
     git add "$manifest"
-    git commit -m "chore: release $new_version"
+    git commit -m "release: $new_version"
     git tag -a "$tag" -m "Release $new_version"
     git push
     git push origin "$tag"
