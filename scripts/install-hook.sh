@@ -21,7 +21,10 @@ fi
 
 settings="$repo_root/.claude/settings.json"
 mkdir -p "$(dirname "$settings")"
-tmp="$(mktemp)"
+# Stage next to the target so `mv` stays on one filesystem and resolves
+# to rename(2) — atomic even when Claude Code holds settings.json open.
+tmp="$(mktemp "$settings.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
 if [[ -f "$settings" ]]; then
     jq '.gitmoji.enabled = true' "$settings" > "$tmp"
 else
