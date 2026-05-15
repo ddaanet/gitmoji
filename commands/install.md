@@ -2,44 +2,70 @@
 description: Install the gitmoji commit-msg hook into the current git repository.
 ---
 
-Opt this repository in to the gitmoji `commit-msg` hook.
+Install the gitmoji `commit-msg` hook in the current repository by
+writing `.claude/settings.json` and materializing the per-repo hook
+files. Use the `Read`, `Edit`, and `Write` tools directly — do not
+shell out to the bash installer script.
 
-Run:
+## Steps
 
-```
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/install-hook.sh
-```
+1. Operate on the current working directory. Assume `cwd` is the
+   repository root; if it is not, ask the user to re-run from the
+   root.
 
-Behaviour:
+2. Update `.claude/settings.json`. If the file exists, use `Edit` to
+   set `.gitmoji.enabled = true` while preserving every other key.
+   If it does not exist, create `.claude/` and `Write` exactly:
 
-- Writes `gitmoji.enabled: true` into project-scope
-  `.claude/settings.json` (checked in, so the whole team opts in via
-  git).
-- Materializes the hook immediately: copies `gitmoji.sh` / `gitmoji.cfg`
-  into `.git/hooks/` and writes a marker-tagged `commit-msg` wrapper.
-- Refuses to overwrite an existing `commit-msg` hook that lacks the
-  marker (move or remove it first).
+   ```json
+   {
+     "gitmoji": {
+       "enabled": true
+     }
+   }
+   ```
 
-The plugin's SessionStart hook re-runs the materializer on every Claude
-Code session, re-materializing `.git/hooks/` from the plugin's current
-version. Plugin upgrades propagate to every installed repo on the next
-session, no per-repo reinstall.
+3. Check `.git/hooks/commit-msg`. If it exists and does **not**
+   contain the literal string `gitmoji-plugin-installed`, stop and
+   tell the user to move or remove the existing hook before
+   re-running.
 
-### Scope overrides
+4. Materialize the hook files in `.git/hooks/`. For each, `Read` the
+   source from `${CLAUDE_PLUGIN_ROOT}/scripts/` and `Write` it
+   **verbatim** (do not retype — shell metacharacters like `$0` and
+   `$@` must round-trip exactly):
+   - `scripts/gitmoji.sh` → `.git/hooks/gitmoji.sh`
+   - `scripts/gitmoji.cfg` → `.git/hooks/gitmoji.cfg`
+   - `scripts/commit-msg.template` → `.git/hooks/commit-msg` (this
+     file carries the `gitmoji-plugin-installed` marker the
+     materializer looks for; it must not be edited)
 
-`gitmoji.enabled` is read from Claude Code's settings hierarchy — more
-specific wins:
+5. Run `chmod +x .git/hooks/commit-msg .git/hooks/gitmoji.sh` to make
+   the hook scripts executable. This is the only Bash call required.
 
-1. `.claude/settings.local.json` (this repo, per-user, gitignored)
-2. `.claude/settings.json` (this repo, checked in) — where `/install` writes
-3. `~/.claude/settings.json` (your user defaults, every repo)
+6. Tell the user the hook is installed: conventional prefixes
+   (`feat:`, `fix:`, etc.) will now be rewritten to gitmoji emojis on
+   commit. See `${CLAUDE_PLUGIN_ROOT}/scripts/gitmoji.cfg` for the
+   full prefix → emoji mapping.
 
-To opt in user-wide for every repo, add `"gitmoji": {"enabled": true}`
-to `~/.claude/settings.json`. To opt out locally, set it to `false` in
-`.claude/settings.local.json`.
+## Why this shape
 
-After installation, conventional prefixes in commit messages are
-translated to emojis at commit time: `feat: add X` becomes `✨ add X`.
+`.claude/settings.json` is the source of truth — the `gitmoji.enabled`
+setting, not files in `.git/hooks/`, decides whether the hook runs.
+Writing it travels with the repo via git, so teammates inherit the
+opt-in. The `.git/hooks/` files are a cache: the plugin's
+`SessionStart` hook regenerates them from the current plugin version
+on every session, so plugin upgrades land without per-repo work.
 
-See `${CLAUDE_PLUGIN_ROOT}/scripts/gitmoji.cfg` for the full prefix →
-emoji mapping.
+## Scope overrides
+
+`gitmoji.enabled` resolves from Claude Code's settings hierarchy —
+more specific wins:
+
+1. `.claude/settings.local.json` (per-user, gitignored)
+2. `.claude/settings.json` (checked in) — where this command writes
+3. `~/.claude/settings.json` (user defaults)
+
+To opt in user-wide, set `"gitmoji": {"enabled": true}` in
+`~/.claude/settings.json`. To opt out for a single repo, set it to
+`false` in `.claude/settings.local.json`.

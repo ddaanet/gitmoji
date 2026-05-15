@@ -3,7 +3,7 @@
 Living document. Captures the research, analysis, and decisions behind
 this plugin. Updated as the design evolves.
 
-Last updated: 2026-04-23.
+Last updated: 2026-05-08.
 
 ## Problem
 
@@ -64,11 +64,30 @@ version running in the current session. Plugin upgrades propagate
 automatically: the next SessionStart rewrites `.git/hooks/` from the
 new version.
 
-The slash commands `/gitmoji:install` and `/gitmoji:uninstall` are
-thin wrappers that toggle `gitmoji.enabled` in project-scope
-`.claude/settings.json` and then invoke the materializer immediately
-(so the user doesn't have to wait for the next session to see the
-effect).
+The slash commands `/gitmoji:install` and `/gitmoji:uninstall` toggle
+`gitmoji.enabled` in project-scope `.claude/settings.json` and
+materialize (or tear down) the per-repo hook files immediately, so the
+user doesn't have to wait for the next session to see the effect.
+They drive the harness `Read`/`Edit`/`Write` tools directly rather
+than shelling out to the bash scripts (see "Why slash commands do not
+invoke the bash scripts" below).
+
+### Why slash commands do not invoke the bash scripts
+
+Claude Code's sandbox blocks Bash from writing to `.claude/settings.json`
+and `.git/hooks/`. Running `bash install-hook.sh` from inside a Claude
+Code session therefore requires the user to approve a broad sandbox-
+bypass prompt. The `Edit`/`Write` tools run in the harness, above the
+Bash sandbox, and can mutate those paths without any sandbox escape.
+Whether they surface a normal tool-permission prompt depends on the
+user's permission mode (in `auto` mode they have been observed to
+proceed without prompts; stricter modes may prompt per file).
+
+`scripts/install-hook.sh` and `scripts/uninstall-hook.sh` remain in
+the repo for users running directly from a shell (e.g. `bash
+scripts/install-hook.sh` outside Claude Code), and as the bodies of
+SessionStart materialization. They are no longer the slash command
+implementation.
 
 ## Requirements this design meets
 
@@ -107,18 +126,28 @@ effect).
 ## Decomposition
 
 - **`commands/install.md`** / **`commands/uninstall.md`**: user-facing
-  slash commands. Each invokes the corresponding script under
-  `${CLAUDE_PLUGIN_ROOT}/scripts/`.
+  slash commands. Their bodies instruct Claude to edit
+  `.claude/settings.json` and materialize/tear down the `.git/hooks/`
+  files using the harness `Read`/`Edit`/`Write` tools (plus a single
+  `chmod` on install). They do not invoke the bash installer scripts.
 - **`hooks/hooks.json`**: registers the SessionStart hook that invokes
   `session-materialize.sh`.
 - **`scripts/session-materialize.sh`**: single entry point for
   writing/removing per-repo hook files based on the effective
   `gitmoji.enabled` setting. Idempotent.
 - **`scripts/install-hook.sh`** / **`scripts/uninstall-hook.sh`**:
-  toggle `gitmoji.enabled` in project-scope `.claude/settings.json` and
-  invoke the materializer.
+  shell entry points for users running outside Claude Code. Toggle
+  `gitmoji.enabled` in project-scope `.claude/settings.json` and
+  invoke the materializer. The slash commands no longer call these
+  scripts; they exist for direct-shell use only.
 - **`scripts/gitmoji.sh`** / **`scripts/gitmoji.cfg`**: the hook body
   and prefix mapping. Source of truth for both lives here.
+- **`scripts/commit-msg.template`**: the marker-tagged `commit-msg`
+  wrapper. Copied verbatim into `.git/hooks/commit-msg` by both
+  `session-materialize.sh` and the `/gitmoji:install` slash command.
+  Existing as a real file (rather than an inline heredoc) lets the
+  install command `Read`/`Write` it without having to retype shell
+  metacharacters.
 
 ## Relationship to upstream devddaanet
 

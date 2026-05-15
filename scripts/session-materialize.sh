@@ -51,11 +51,7 @@ if [[ "$enabled" == "true" ]]; then
     cp "$script_dir/gitmoji.sh"  "$hooks_dir/gitmoji.sh"
     cp "$script_dir/gitmoji.cfg" "$hooks_dir/gitmoji.cfg"
     chmod +x "$hooks_dir/gitmoji.sh"
-    cat > "$target" <<EOF
-#!/usr/bin/env bash
-# $marker
-exec "\$(dirname "\$0")/gitmoji.sh" "\$@"
-EOF
+    cp "$script_dir/commit-msg.template" "$target"
     chmod +x "$target"
     echo "gitmoji: materialized commit-msg hook at $target"
 else
