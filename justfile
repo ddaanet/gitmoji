@@ -38,6 +38,19 @@ test msg="feat: add a thing":
     bash scripts/gitmoji.sh "$tmp" || { echo "hook failed"; exit 1; }
     echo "output: $(cat "$tmp")"
 
+# Integration test: drive /gitmoji:install via `claude -p` and assert
+# the slash command works without escalating to `bash install-hook.sh`.
+test-install:
+    bash tests/install.sh
+
+# Integration test: drive /gitmoji:uninstall via `claude -p` and assert
+# the slash command works without escalating to `bash uninstall-hook.sh`.
+test-uninstall:
+    bash tests/uninstall.sh
+
+# Run all integration tests for the slash commands.
+test-integration: test-install test-uninstall
+
 # Create release: bump plugin.json version, commit, tag, push, GH release.
 # Pass `--yes` as the second arg to skip the interactive confirmation
 # (useful when an outer permission layer already gates the command).
