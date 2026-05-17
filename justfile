@@ -1,17 +1,16 @@
+import 'plugin-dev/release.just'
+
 # gitmoji plugin — dev recipes
 
 # Default: list recipes
 _default:
     @just --list
 
-# Validate manifest and script syntax
-validate:
+# Lint manifests + hooks.json, run shellcheck on scripts.
+# Imported `release` recipe depends on this name.
+precommit:
     jq . .claude-plugin/plugin.json > /dev/null
     jq . hooks/hooks.json > /dev/null
-    bash -n scripts/gitmoji.sh
-    bash -n scripts/install-hook.sh
-    bash -n scripts/uninstall-hook.sh
-    bash -n scripts/session-materialize.sh
     shellcheck -x scripts/*.sh
     @echo "ok"
 
@@ -50,38 +49,3 @@ test-uninstall:
 
 # Run all integration tests for the slash commands.
 test-integration: test-install test-uninstall
-
-# Create release: bump plugin.json version, commit, tag, push, GH release.
-# Pass `--yes` as the second arg to skip the interactive confirmation
-# (useful when an outer permission layer already gates the command).
-release bump='patch' yes='': validate
-    #!/usr/bin/env bash
-    set -euo pipefail
-    manifest=".claude-plugin/plugin.json"
-    git diff --quiet HEAD || { echo "error: uncommitted changes" >&2; exit 1; }
-    branch=$(git symbolic-ref -q --short HEAD || echo "")
-    [ "$branch" = "main" ] || { echo "error: must be on main (currently $branch)" >&2; exit 1; }
-    new_version=$(jq -r --arg bump "{{bump}}" '
-      (.version | split(".") | map(tonumber)) as [$maj,$min,$pat]
-      | if   $bump == "major" then [$maj+1, 0, 0]
-        elif $bump == "minor" then [$maj, $min+1, 0]
-        elif $bump == "patch" then [$maj, $min, $pat+1]
-        else error("unknown bump type: " + $bump) end
-      | map(tostring) | join(".")
-    ' "$manifest")
-    tag="v$new_version"
-    git rev-parse "$tag" >/dev/null 2>&1 && { echo "error: tag $tag already exists" >&2; exit 1; }
-    if [ "{{yes}}" != "--yes" ]; then
-        read -rp "Release $new_version? [y/N] " answer
-        case "$answer" in y|Y) ;; *) exit 1 ;; esac
-    fi
-    tmp=$(mktemp)
-    jq --arg v "$new_version" '.version = $v' "$manifest" > "$tmp"
-    mv "$tmp" "$manifest"
-    git add "$manifest"
-    git commit -m "release: $new_version"
-    git tag -a "$tag" -m "Release $new_version"
-    git push
-    git push origin "$tag"
-    gh release create "$tag" --title "Release $new_version" --generate-notes
-    echo "Release $tag complete"
