@@ -1,5 +1,8 @@
 {
   "gitmoji": {
     "enabled": true
+  },
+  "enabledPlugins": {
+    "gitmoji@ddaanet": true
   }
 }
