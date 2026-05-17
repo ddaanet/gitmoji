@@ -15,6 +15,7 @@
 .claude/settings.local.json
 .claude/handoff.md
 .claude/handoff-task.md
+.claude/worktrees/
 
 # Integration test scratch directories (mktemp -d under cwd)
 .test-install-*
