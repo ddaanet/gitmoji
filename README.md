@@ -36,11 +36,12 @@ Then opt the current repo in:
 /gitmoji:install
 ```
 
-This writes `gitmoji.enabled: true` into `.claude/settings.json`
-(checked in — every teammate gets the hook on their next Claude Code
-session). The plugin's SessionStart hook re-materializes the
-`.git/hooks/commit-msg` wrapper from the current plugin version on
-every session, so plugin upgrades propagate with zero per-repo work.
+This writes `pluginConfigs["gitmoji@ddaanet"].options.enabled = true`
+into `.claude/settings.json` (checked in — every teammate gets the
+hook on their next Claude Code session). The plugin's SessionStart
+hook re-materializes the `.git/hooks/commit-msg` wrapper from the
+current plugin version on every session, so plugin upgrades propagate
+with zero per-repo work.
 
 Opt the repo out:
 
@@ -50,16 +51,27 @@ Opt the repo out:
 
 ### Opt-in scopes
 
-`gitmoji.enabled` is resolved from Claude Code's standard settings
-hierarchy (more specific wins):
+The flag is resolved from Claude Code's standard settings hierarchy
+(more specific wins):
 
 1. `.claude/settings.local.json` (this repo, per-user, gitignored)
 2. `.claude/settings.json` (this repo, checked in) — where the slash
    commands write
 3. `~/.claude/settings.json` (your user defaults)
 
-To opt in **everywhere**, set `"gitmoji": {"enabled": true}` in
-`~/.claude/settings.json`. To opt out in one repo, set it to `false` in
+To opt in **everywhere**, add this to `~/.claude/settings.json`:
+
+```json
+{
+  "pluginConfigs": {
+    "gitmoji@ddaanet": {
+      "options": { "enabled": true }
+    }
+  }
+}
+```
+
+To opt out in one repo, write the same structure with `false` into
 `.claude/settings.local.json`.
 
 ## Safety

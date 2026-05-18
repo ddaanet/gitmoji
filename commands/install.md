@@ -14,16 +14,25 @@ shell out to the bash installer script.
    root.
 
 2. Update `.claude/settings.json`. If the file exists, use `Edit` to
-   set `.gitmoji.enabled = true` while preserving every other key.
-   If it does not exist, create `.claude/` and `Write` exactly:
+   set `.pluginConfigs["gitmoji@ddaanet"].options.enabled = true`,
+   creating intermediate objects as needed and preserving every other
+   key. If it does not exist, create `.claude/` and `Write` exactly:
 
    ```json
    {
-     "gitmoji": {
-       "enabled": true
+     "pluginConfigs": {
+       "gitmoji@ddaanet": {
+         "options": {
+           "enabled": true
+         }
+       }
      }
    }
    ```
+
+   Do **not** put the flag at a top-level `gitmoji` key — Claude
+   Code's runtime settings validator rejects unknown top-level keys,
+   so the Edit/Write would fail.
 
 3. Check `.git/hooks/commit-msg`. If it exists and does **not**
    contain the literal string `gitmoji-plugin-installed`, stop and
@@ -50,22 +59,28 @@ shell out to the bash installer script.
 
 ## Why this shape
 
-`.claude/settings.json` is the source of truth — the `gitmoji.enabled`
-setting, not files in `.git/hooks/`, decides whether the hook runs.
-Writing it travels with the repo via git, so teammates inherit the
-opt-in. The `.git/hooks/` files are a cache: the plugin's
-`SessionStart` hook regenerates them from the current plugin version
-on every session, so plugin upgrades land without per-repo work.
+`.claude/settings.json` is the source of truth — the
+`pluginConfigs["gitmoji@ddaanet"].options.enabled` setting, not files
+in `.git/hooks/`, decides whether the hook runs. Writing it travels
+with the repo via git, so teammates inherit the opt-in. The
+`.git/hooks/` files are a cache: the plugin's `SessionStart` hook
+regenerates them from the current plugin version on every session, so
+plugin upgrades land without per-repo work.
+
+`pluginConfigs` is the slot Claude Code reserves for plugin-specific
+config (boolean / number / string / string[] values). A top-level
+`gitmoji` key would be rejected by the settings validator.
 
 ## Scope overrides
 
-`gitmoji.enabled` resolves from Claude Code's settings hierarchy —
-more specific wins:
+The flag resolves from Claude Code's settings hierarchy — more
+specific wins:
 
 1. `.claude/settings.local.json` (per-user, gitignored)
 2. `.claude/settings.json` (checked in) — where this command writes
 3. `~/.claude/settings.json` (user defaults)
 
-To opt in user-wide, set `"gitmoji": {"enabled": true}` in
+To opt in user-wide, set
+`pluginConfigs["gitmoji@ddaanet"].options.enabled = true` in
 `~/.claude/settings.json`. To opt out for a single repo, set it to
 `false` in `.claude/settings.local.json`.

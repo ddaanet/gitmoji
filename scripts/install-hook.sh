@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Opt this repo in to the gitmoji commit-msg hook by writing
-# `gitmoji.enabled = true` into project-scope .claude/settings.json, then
-# materializing the hook immediately. Settings is the source of truth —
-# the plugin's SessionStart hook keeps .git/hooks/ in sync on every
-# session (so plugin upgrades propagate transparently).
+# `pluginConfigs["gitmoji@ddaanet"].options.enabled = true` into
+# project-scope .claude/settings.json, then materializing the hook
+# immediately. Settings is the source of truth — the plugin's
+# SessionStart hook keeps .git/hooks/ in sync on every session (so
+# plugin upgrades propagate transparently).
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
@@ -26,11 +27,11 @@ mkdir -p "$(dirname "$settings")"
 tmp="$(mktemp "$settings.XXXXXX")"
 trap 'rm -f "$tmp"' EXIT
 if [[ -f "$settings" ]]; then
-    jq '.gitmoji.enabled = true' "$settings" > "$tmp"
+    jq '.pluginConfigs["gitmoji@ddaanet"].options.enabled = true' "$settings" > "$tmp"
 else
-    jq -n '{gitmoji: {enabled: true}}' > "$tmp"
+    jq -n '{pluginConfigs: {"gitmoji@ddaanet": {options: {enabled: true}}}}' > "$tmp"
 fi
 mv "$tmp" "$settings"
-echo "set gitmoji.enabled = true in $settings"
+echo "enabled gitmoji in $settings"
 
 CLAUDE_PROJECT_DIR="$repo_root" bash "$script_dir/session-materialize.sh"

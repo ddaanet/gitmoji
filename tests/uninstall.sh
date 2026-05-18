@@ -17,7 +17,7 @@ git config user.name "Integration Test"
 # Set up an installed state directly: write settings, copy hook files,
 # chmod them executable. This is test scaffolding, not under test.
 mkdir -p .claude
-echo '{"gitmoji": {"enabled": true}}' | jq . > .claude/settings.json
+echo '{"pluginConfigs": {"gitmoji@ddaanet": {"options": {"enabled": true}}}}' | jq . > .claude/settings.json
 cp "$plugin_root/scripts/gitmoji.sh"  .git/hooks/gitmoji.sh
 cp "$plugin_root/scripts/gitmoji.cfg" .git/hooks/gitmoji.cfg
 cat > .git/hooks/commit-msg <<'EOF'
@@ -46,8 +46,8 @@ fail() {
 
 [ "$status" -eq 0 ] || fail "claude exited with status $status"
 
-jq -e '.gitmoji.enabled == false' .claude/settings.json >/dev/null \
-    || fail ".claude/settings.json missing gitmoji.enabled = false"
+jq -e '.pluginConfigs["gitmoji@ddaanet"].options.enabled == false' .claude/settings.json >/dev/null \
+    || fail ".claude/settings.json missing pluginConfigs[gitmoji@ddaanet].options.enabled = false"
 
 [ ! -f .git/hooks/commit-msg ]  || fail ".git/hooks/commit-msg was not removed"
 [ ! -f .git/hooks/gitmoji.sh ]  || fail ".git/hooks/gitmoji.sh was not removed"

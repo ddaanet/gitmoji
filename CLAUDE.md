@@ -14,18 +14,27 @@ to edit the hook scripts, installer, or commands.
   `.git/hooks/` by the materializer)
 - `scripts/gitmoji.cfg` — prefix → emoji mapping (bash associative
   array, sourced by `gitmoji.sh`)
-- `scripts/session-materialize.sh` — reads `gitmoji.enabled` from the
+- `scripts/session-materialize.sh` — reads
+  `pluginConfigs["gitmoji@ddaanet"].options.enabled` from the
   settings hierarchy and materializes or tears down the per-repo hook
-- `scripts/install-hook.sh` — writes `gitmoji.enabled = true` into
+- `scripts/install-hook.sh` — writes
+  `pluginConfigs["gitmoji@ddaanet"].options.enabled = true` into
   project-scope `.claude/settings.json` and invokes the materializer
-- `scripts/uninstall-hook.sh` — writes `gitmoji.enabled = false` and
+- `scripts/uninstall-hook.sh` — writes the same key to `false` and
   invokes the materializer
 
 ## Opt-in model
 
 Opt-in is a **settings.json entry**, not the presence of a file in
-`.git/hooks/`. The effective value of `gitmoji.enabled` is read across
-the standard Claude Code hierarchy (more specific wins):
+`.git/hooks/`. The flag lives at
+`pluginConfigs["gitmoji@ddaanet"].options.enabled` — the sanctioned
+slot for plugin config. A top-level `gitmoji` key would be rejected
+by Claude Code's strict settings validator (it's a hand-rolled Zod
+schema; the published JSON Schema's `additionalProperties: true` is
+documentation, not the runtime check).
+
+The effective value is read across the standard Claude Code hierarchy
+(more specific wins):
 
 1. `.claude/settings.local.json` (repo, per-user, gitignored)
 2. `.claude/settings.json` (repo, checked in)

@@ -37,8 +37,8 @@ fail() {
 
 [ -f .claude/settings.json ] \
     || fail ".claude/settings.json was not created"
-jq -e '.gitmoji.enabled == true' .claude/settings.json >/dev/null \
-    || fail ".claude/settings.json missing gitmoji.enabled = true"
+jq -e '.pluginConfigs["gitmoji@ddaanet"].options.enabled == true' .claude/settings.json >/dev/null \
+    || fail ".claude/settings.json missing pluginConfigs[gitmoji@ddaanet].options.enabled = true"
 
 [ -f .git/hooks/commit-msg ] \
     || fail ".git/hooks/commit-msg was not created"

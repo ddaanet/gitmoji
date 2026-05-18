@@ -3,7 +3,7 @@
 Living document. Captures the research, analysis, and decisions behind
 this plugin. Updated as the design evolves.
 
-Last updated: 2026-05-08.
+Last updated: 2026-05-18.
 
 ## Problem
 
@@ -34,11 +34,11 @@ What it does *not* need:
 **Opt-in lives in `.claude/settings.json`, not in `.git/hooks/`.** Hook
 files are not git-tracked, so a cloned repo that "wants gitmoji" cannot
 signal that through `.git/hooks/`. A checked-in `.claude/settings.json`
-with `gitmoji.enabled: true` is the correct source of truth — it
-travels with the repo.
+with `pluginConfigs["gitmoji@ddaanet"].options.enabled = true` is the
+correct source of truth — it travels with the repo.
 
-The effective value of `gitmoji.enabled` is read across the standard
-Claude Code hierarchy (more specific wins):
+The effective value is read across the standard Claude Code hierarchy
+(more specific wins):
 
 1. `.claude/settings.local.json` (repo, per-user, gitignored)
 2. `.claude/settings.json` (repo, checked in)
@@ -47,13 +47,38 @@ Claude Code hierarchy (more specific wins):
 Managed (enterprise) and CLI overrides sit above these, inherited from
 Claude Code's normal precedence rules.
 
+### Settings path: pluginConfigs slot, not a top-level key
+
+Earlier drafts of this plugin stored the flag at a top-level
+`gitmoji.enabled` key. That cannot work: Claude Code's runtime
+`settings.json` validator is a hand-rolled Zod schema (visible in the
+error payload as `"code": "unrecognized_keys"`) that rejects any
+top-level key it doesn't know about. The published JSON Schema at
+`json.schemastore.org/claude-code-settings.json` declares
+`additionalProperties: true` at the root, but that's documentation
+for editor tooling — the runtime check is the source of truth and is
+strict.
+
+`pluginConfigs[<plugin>@<marketplace>].options.<key>` is the
+sanctioned slot for plugin-specific config. Values are constrained to
+string, number, boolean, or string[], which fits an `enabled` boolean
+cleanly. Using this path means the harness `Read`/`Edit`/`Write`
+tools mutate `.claude/settings.json` without tripping the validator,
+so the slash commands can stay sandbox-clean.
+
+The full path for this plugin is
+`pluginConfigs["gitmoji@ddaanet"].options.enabled`. Brackets are
+needed in jq filters because `@` isn't allowed in unquoted jq
+identifiers.
+
 ## Materialization
 
 On every Claude Code session, `hooks/hooks.json` fires the SessionStart
 event, which runs `scripts/session-materialize.sh`. That script:
 
 1. Resolves the repo root from `${CLAUDE_PROJECT_DIR}`.
-2. Reads `gitmoji.enabled` from the hierarchy above.
+2. Reads `pluginConfigs["gitmoji@ddaanet"].options.enabled` from the
+   hierarchy above.
 3. If `true`: copies `gitmoji.sh` + `gitmoji.cfg` into `.git/hooks/`
    and writes a marker-tagged `commit-msg` wrapper.
 4. If `false` or unset: removes any marker-tagged hook files.
@@ -65,12 +90,12 @@ automatically: the next SessionStart rewrites `.git/hooks/` from the
 new version.
 
 The slash commands `/gitmoji:install` and `/gitmoji:uninstall` toggle
-`gitmoji.enabled` in project-scope `.claude/settings.json` and
-materialize (or tear down) the per-repo hook files immediately, so the
-user doesn't have to wait for the next session to see the effect.
-They drive the harness `Read`/`Edit`/`Write` tools directly rather
-than shelling out to the bash scripts (see "Why slash commands do not
-invoke the bash scripts" below).
+`pluginConfigs["gitmoji@ddaanet"].options.enabled` in project-scope
+`.claude/settings.json` and materialize (or tear down) the per-repo
+hook files immediately, so the user doesn't have to wait for the next
+session to see the effect. They drive the harness `Read`/`Edit`/`Write`
+tools directly rather than shelling out to the bash scripts (see "Why
+slash commands do not invoke the bash scripts" below).
 
 ### Why slash commands do not invoke the bash scripts
 
@@ -78,16 +103,21 @@ Claude Code's sandbox blocks Bash from writing to `.claude/settings.json`
 and `.git/hooks/`. Running `bash install-hook.sh` from inside a Claude
 Code session therefore requires the user to approve a broad sandbox-
 bypass prompt. The `Edit`/`Write` tools run in the harness, above the
-Bash sandbox, and can mutate those paths without any sandbox escape.
-Whether they surface a normal tool-permission prompt depends on the
-user's permission mode (in `auto` mode they have been observed to
+Bash sandbox, and can mutate those paths without any sandbox escape —
+provided the keys being written are recognized by the settings
+validator. That's the second reason the flag lives under
+`pluginConfigs` rather than a top-level `gitmoji` key (see "Settings
+path" above): without that, the validator would reject every Edit and
+the slash command's approach would fall apart.
+
+Whether Edit/Write surface a normal tool-permission prompt depends on
+the user's permission mode (in `auto` mode they have been observed to
 proceed without prompts; stricter modes may prompt per file).
 
 `scripts/install-hook.sh` and `scripts/uninstall-hook.sh` remain in
 the repo for users running directly from a shell (e.g. `bash
-scripts/install-hook.sh` outside Claude Code), and as the bodies of
-SessionStart materialization. They are no longer the slash command
-implementation.
+scripts/install-hook.sh` outside Claude Code). They are no longer the
+slash command implementation.
 
 ## Requirements this design meets
 
@@ -134,10 +164,11 @@ implementation.
   `session-materialize.sh`.
 - **`scripts/session-materialize.sh`**: single entry point for
   writing/removing per-repo hook files based on the effective
-  `gitmoji.enabled` setting. Idempotent.
+  `pluginConfigs["gitmoji@ddaanet"].options.enabled` setting.
+  Idempotent.
 - **`scripts/install-hook.sh`** / **`scripts/uninstall-hook.sh`**:
   shell entry points for users running outside Claude Code. Toggle
-  `gitmoji.enabled` in project-scope `.claude/settings.json` and
+  the same setting in project-scope `.claude/settings.json` and
   invoke the materializer. The slash commands no longer call these
   scripts; they exist for direct-shell use only.
 - **`scripts/gitmoji.sh`** / **`scripts/gitmoji.cfg`**: the hook body

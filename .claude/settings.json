@@ -1,7 +1,4 @@
 {
-  "gitmoji": {
-    "enabled": true
-  },
   "enabledPlugins": {
     "gitmoji@ddaanet": true
   },
@@ -17,5 +14,12 @@
         ]
       }
     ]
+  },
+  "pluginConfigs": {
+    "gitmoji@ddaanet": {
+      "options": {
+        "enabled": true
+      }
+    }
   }
 }

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Materialize or tear down the per-repo commit-msg hook based on the
-# effective `gitmoji.enabled` setting across Claude Code's settings.json
-# hierarchy (local > project > user). Idempotent; safe to run on every
-# SessionStart. Always writes hook files from this invocation's plugin
-# version, so plugin upgrades propagate on the next session.
+# effective `pluginConfigs["gitmoji@ddaanet"].options.enabled` setting
+# across Claude Code's settings.json hierarchy (local > project >
+# user). Idempotent; safe to run on every SessionStart. Always writes
+# hook files from this invocation's plugin version, so plugin upgrades
+# propagate on the next session.
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
@@ -22,7 +23,7 @@ fi
 read_setting() {
     local file="$1"
     [[ -f "$file" ]] || return 0
-    jq -r '.gitmoji.enabled | values' "$file" 2>/dev/null || true
+    jq -r '.pluginConfigs["gitmoji@ddaanet"].options.enabled | values' "$file" 2>/dev/null || true
 }
 
 enabled=""

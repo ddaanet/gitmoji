@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Opt this repo out of the gitmoji commit-msg hook by setting
-# `gitmoji.enabled = false` in project-scope .claude/settings.json, then
-# tearing down the per-repo hook immediately. Leaves unrelated hooks
-# alone (only removes files carrying the plugin-installed marker).
+# `pluginConfigs["gitmoji@ddaanet"].options.enabled = false` in
+# project-scope .claude/settings.json, then tearing down the per-repo
+# hook immediately. Leaves unrelated hooks alone (only removes files
+# carrying the plugin-installed marker).
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
@@ -25,11 +26,11 @@ mkdir -p "$(dirname "$settings")"
 tmp="$(mktemp "$settings.XXXXXX")"
 trap 'rm -f "$tmp"' EXIT
 if [[ -f "$settings" ]]; then
-    jq '.gitmoji.enabled = false' "$settings" > "$tmp"
+    jq '.pluginConfigs["gitmoji@ddaanet"].options.enabled = false' "$settings" > "$tmp"
 else
-    jq -n '{gitmoji: {enabled: false}}' > "$tmp"
+    jq -n '{pluginConfigs: {"gitmoji@ddaanet": {options: {enabled: false}}}}' > "$tmp"
 fi
 mv "$tmp" "$settings"
-echo "set gitmoji.enabled = false in $settings"
+echo "disabled gitmoji in $settings"
 
 CLAUDE_PROJECT_DIR="$repo_root" bash "$script_dir/session-materialize.sh"

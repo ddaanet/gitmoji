@@ -13,13 +13,18 @@ to the bash uninstaller script.
    root.
 
 2. Update `.claude/settings.json`. If the file exists, use `Edit` to
-   set `.gitmoji.enabled = false` while preserving every other key.
-   If it does not exist, create `.claude/` and `Write`:
+   set `.pluginConfigs["gitmoji@ddaanet"].options.enabled = false`,
+   creating intermediate objects as needed and preserving every other
+   key. If it does not exist, create `.claude/` and `Write`:
 
    ```json
    {
-     "gitmoji": {
-       "enabled": false
+     "pluginConfigs": {
+       "gitmoji@ddaanet": {
+         "options": {
+           "enabled": false
+         }
+       }
      }
    }
    ```
@@ -42,16 +47,17 @@ to the bash uninstaller script.
 ## Why this shape
 
 `.claude/settings.json` is the source of truth — setting
-`gitmoji.enabled` to `false` is what disables the hook for teammates
-on their next session. The `.git/hooks/` files are a cache; removing
-them is immediate cleanup. The plugin's `SessionStart` materializer
-runs the same teardown on every session if `gitmoji.enabled` is
-`false`, so any stale cache files on other clones get cleaned up
-automatically.
+`pluginConfigs["gitmoji@ddaanet"].options.enabled` to `false` is what
+disables the hook for teammates on their next session. The
+`.git/hooks/` files are a cache; removing them is immediate cleanup.
+The plugin's `SessionStart` materializer runs the same teardown on
+every session if the flag is `false`, so any stale cache files on
+other clones get cleaned up automatically.
 
 ## Scope overrides
 
-To opt out for every repo, set `"gitmoji": {"enabled": false}` in
+To opt out for every repo, set
+`pluginConfigs["gitmoji@ddaanet"].options.enabled = false` in
 `~/.claude/settings.json`. To opt out for one user in one repo
 without changing the team's checked-in setting, use
 `.claude/settings.local.json`.
