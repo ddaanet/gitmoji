@@ -30,49 +30,64 @@ Install the plugin from the `ddaanet` marketplace:
 /plugin install gitmoji@ddaanet
 ```
 
-Then opt the current repo in:
+That enables the plugin at user scope (`~/.claude/settings.json`
+gets `enabledPlugins["gitmoji@ddaanet"] = true`). The plugin's
+SessionStart hook then installs `.git/hooks/commit-msg` in every
+repo you open in Claude Code, so commit messages get rewritten
+everywhere.
 
+### Per-repo opt-in (team-shared)
+
+If you want the hook only in specific repos and want teammates to
+inherit it automatically, do **not** enable user-scope (or set it
+to `false` in `~/.claude/settings.json`). In each repo where you
+want gitmoji active, add to the checked-in `.claude/settings.json`:
+
+```json
+{
+  "enabledPlugins": {
+    "gitmoji@ddaanet": true
+  }
+}
 ```
-/gitmoji:install
+
+Teammates cloning the repo inherit the opt-in. On their first
+Claude Code session, the plugin's SessionStart installs the hook.
+
+### Per-repo opt-out
+
+To disable gitmoji in a single repo while keeping it on
+elsewhere, add to `.claude/settings.local.json` (per-user,
+gitignored):
+
+```json
+{
+  "enabledPlugins": {
+    "gitmoji@ddaanet": false
+  }
+}
 ```
 
-This writes `pluginConfigs["gitmoji@ddaanet"].options.enabled = true`
-into `.claude/settings.json` (checked in — every teammate gets the
-hook on their next Claude Code session). The plugin's SessionStart
-hook re-materializes the `.git/hooks/commit-msg` wrapper from the
-current plugin version on every session, so plugin upgrades propagate
-with zero per-repo work.
+### Uninstall
 
-Opt the repo out:
+To remove the hook from one repo:
 
 ```
 /gitmoji:uninstall
 ```
 
-### Opt-in scopes
+This removes the marker-tagged hook files from `.git/hooks/`. It
+does **not** touch `enabledPlugins` — you control that via
+`/plugin uninstall` or hand-edit.
 
-The flag is resolved from Claude Code's standard settings hierarchy
-(more specific wins):
-
-1. `.claude/settings.local.json` (this repo, per-user, gitignored)
-2. `.claude/settings.json` (this repo, checked in) — where the slash
-   commands write
-3. `~/.claude/settings.json` (your user defaults)
-
-To opt in **everywhere**, add this to `~/.claude/settings.json`:
-
-```json
-{
-  "pluginConfigs": {
-    "gitmoji@ddaanet": {
-      "options": { "enabled": true }
-    }
-  }
-}
-```
-
-To opt out in one repo, write the same structure with `false` into
-`.claude/settings.local.json`.
+**Important:** Run `/gitmoji:uninstall` in each opted-in repo
+*before* running `/plugin uninstall gitmoji@ddaanet`. Once the
+plugin is uninstalled it can no longer clean up its own hook
+files, and the persistent `.git/hooks/commit-msg` will keep
+rewriting your messages. If you've already uninstalled, fall back
+to `rm .git/hooks/{commit-msg,gitmoji.sh,gitmoji.cfg}` (skips
+the marker check — only do this if you're sure those files came
+from gitmoji).
 
 ## Safety
 
@@ -103,8 +118,8 @@ Edit `scripts/gitmoji.cfg` to customise.
 
 ## Dependencies
 
-`jq` on `PATH`. The installer, uninstaller, and SessionStart
-materializer use it to read and edit `.claude/settings.json`.
+`bash` and `git`. No `jq` at runtime — the materializer and
+uninstall script are pure shell with no JSON parsing.
 
 ## License
 
