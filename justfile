@@ -37,15 +37,17 @@ test msg="feat: add a thing":
     bash scripts/gitmoji.sh "$tmp" || { echo "hook failed"; exit 1; }
     echo "output: $(cat "$tmp")"
 
-# Integration test: drive /gitmoji:install via `claude -p` and assert
-# the slash command works without escalating to `bash install-hook.sh`.
-test-install:
-    bash tests/install.sh
+# Integration test: SessionStart materializer installs the per-repo
+# hook unconditionally when invoked, with marker-protection on
+# non-gitmoji commit-msg hooks.
+test-materialize:
+    bash tests/materialize.sh
 
 # Integration test: drive /gitmoji:uninstall via `claude -p` and assert
-# the slash command works without escalating to `bash uninstall-hook.sh`.
+# the slash command removes the hook files without touching
+# `.claude/settings.json`.
 test-uninstall:
     bash tests/uninstall.sh
 
-# Run all integration tests for the slash commands.
-test-integration: test-install test-uninstall
+# Run all integration tests.
+test-integration: test-materialize test-uninstall

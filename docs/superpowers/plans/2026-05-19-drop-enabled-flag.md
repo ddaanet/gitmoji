@@ -12,6 +12,18 @@
 
 ---
 
+## Execution structure (post-plan review)
+
+The 12-task decomposition below was produced by `superpowers:writing-plans` for subagent dispatch. A post-plan review collapsed it to **4 commits + 1 verification pass**, executed inline — most tasks here are "apply this pre-drafted diff and commit," and the dependency chain (test → impl → next test → next impl) makes parallelism cheap to give up. The 12-task content is preserved below as the source of truth for *what* to change; the grouping below describes *how* to commit it.
+
+- **Commit 1** = Tasks 1 + 2 (failing materialize test → new materializer; one TDD pair)
+- **Commit 2** = Tasks 3 + 4 + 5 (failing uninstall test → uninstall script → slash command; second TDD pair plus the command surface that depends on it)
+- **Commit 3** = Tasks 6 + 7 + 8 (drop install artifacts + description bumps on `hooks.json` and `plugin.json`; housekeeping)
+- **Commit 4** = Tasks 9 + 10 + 11 (`CLAUDE.md`, `DESIGN.md`, `README.md` rewrites; doc-only)
+- **Verification** = Task 12
+
+---
+
 ## File structure (decomposition)
 
 **Delete:**
