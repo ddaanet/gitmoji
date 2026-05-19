@@ -1,5 +1,5 @@
 {
-  "description": "On SessionStart, materialize (or tear down) the per-repo gitmoji commit-msg hook from the current plugin version, driven by the effective gitmoji.enabled setting.",
+  "description": "On SessionStart, materialize (install or refresh) the per-repo gitmoji commit-msg hook from the current plugin version. Fires whenever the plugin is enabled in the resolved scope chain.",
   "hooks": {
     "SessionStart": [
       {

@@ -18,6 +18,5 @@
 .claude/worktrees/
 
 # Integration test scratch directories (mktemp -d under cwd)
-.test-install-*
 .test-uninstall-*
 .test-materialize-*

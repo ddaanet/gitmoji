@@ -18,10 +18,6 @@ precommit:
 materialize:
     CLAUDE_PROJECT_DIR="$(git rev-parse --show-toplevel)" bash scripts/session-materialize.sh
 
-# Install the hook in the current git repo
-install:
-    bash scripts/install-hook.sh
-
 # Uninstall the hook from the current git repo
 uninstall:
     bash scripts/uninstall-hook.sh
