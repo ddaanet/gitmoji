@@ -46,7 +46,7 @@ if [[ "$first_line" =~ $re_full ]]; then
 
     if [[ -v "gitmoji[$prefix]" ]]; then
         emoji="${gitmoji[$prefix]}"
-        if [[ -n "$bang"  ]]; then emoji="${emoji}${BOOM}"; fi
+        if [[ -n "$bang" ]]; then emoji="${emoji}${BOOM}"; fi
         if [[ -n "$scope" ]]; then rest="${scope}: ${rest}"; fi
         { echo "$emoji $rest"; tail -n +2 "$msg_file"; } > "$msg_file.tmp"
         mv "$msg_file.tmp" "$msg_file"
@@ -56,7 +56,8 @@ if [[ "$first_line" =~ $re_full ]]; then
         exit 1
     fi
 elif [[ "$first_line" =~ $re_empty_scope ]]; then
-    echo "Empty scope. Scope must be non-empty. Valid prefixes:" >&2
+    bad_prefix="${first_line%%(*}"
+    echo "Empty scope in '${bad_prefix}()'. Scope must be non-empty. Valid prefixes:" >&2
     list_prefixes >&2
     exit 1
 else
