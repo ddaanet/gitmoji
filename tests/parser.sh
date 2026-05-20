@@ -13,11 +13,11 @@ trap 'rm -rf "$scratch"' EXIT
 fail=0
 total=0
 
-next_file() { total=$((total+1)); printf '%s/msg-%d' "$scratch" "$total"; }
-
 assert_rewrite() {
-    local input="$1" expected="$2" name="$3" f
-    f="$(next_file)"; printf '%s\n' "$input" > "$f"
+    local input="$1" expected="$2" name="$3"
+    total=$((total+1))
+    local f="$scratch/msg-$total"
+    printf '%s\n' "$input" > "$f"
     if ! bash "$hook" "$f" 2>/dev/null; then
         echo "FAIL: $name (hook exited non-zero on '$input')"
         fail=$((fail+1)); return
@@ -35,8 +35,10 @@ assert_rewrite() {
 }
 
 assert_skip() {
-    local input="$1" name="$2" f
-    f="$(next_file)"; printf '%s\n' "$input" > "$f"
+    local input="$1" name="$2"
+    total=$((total+1))
+    local f="$scratch/msg-$total"
+    printf '%s\n' "$input" > "$f"
     if ! bash "$hook" "$f" 2>/dev/null; then
         echo "FAIL: $name (hook exited non-zero)"
         fail=$((fail+1)); return
@@ -53,8 +55,10 @@ assert_skip() {
 }
 
 assert_reject() {
-    local input="$1" want_stderr="$2" name="$3" f
-    f="$(next_file)"; printf '%s\n' "$input" > "$f"
+    local input="$1" want_stderr="$2" name="$3"
+    total=$((total+1))
+    local f="$scratch/msg-$total"
+    printf '%s\n' "$input" > "$f"
     local stderr
     if stderr="$(bash "$hook" "$f" 2>&1 >/dev/null)"; then
         echo "FAIL: $name (hook accepted '$input')"
@@ -71,8 +75,10 @@ assert_reject() {
 }
 
 assert_source_type_skip() {
-    local input="$1" source_type="$2" name="$3" f
-    f="$(next_file)"; printf '%s\n' "$input" > "$f"
+    local input="$1" source_type="$2" name="$3"
+    total=$((total+1))
+    local f="$scratch/msg-$total"
+    printf '%s\n' "$input" > "$f"
     if ! bash "$hook" "$f" "$source_type" 2>/dev/null; then
         echo "FAIL: $name (hook exited non-zero, source_type=$source_type)"
         fail=$((fail+1)); return
