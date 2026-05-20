@@ -9,9 +9,12 @@ with settings-driven opt-in.
 On commit, the hook rewrites the first line of the commit message:
 
 ```
-feat: add new feature    →   ✨ add new feature
-fix: handle edge case    →   🐛 handle edge case
-docs: update README      →   📝 update README
+feat: add new feature       →   ✨ add new feature
+fix: handle edge case       →   🐛 handle edge case
+docs: update README         →   📝 update README
+feat(api): add endpoint     →   ✨ api: add endpoint
+feat!: drop python 3.8      →   ✨💥 drop python 3.8
+refactor(api)!: rename it   →   ♻️💥 api: rename it
 ```
 
 Mapping in [`scripts/gitmoji.cfg`](scripts/gitmoji.cfg). The hook is a
@@ -20,6 +23,31 @@ message already starting with a known emoji.
 
 Invalid prefix or missing prefix → commit rejected with a listing of
 valid prefixes.
+
+### Scope
+
+An optional scope in parentheses is rendered into the rewritten
+subject as `<scope>: <description>`:
+
+    feat(api): add endpoint    →   ✨ api: add endpoint
+    fix(core/utils): bug       →   🐛 core/utils: bug
+
+Scope must be lowercase: `[a-z0-9._/-]+`. Empty scope (`feat(): msg`)
+is rejected.
+
+### Breaking changes
+
+Mark a breaking change with `!` after the type (and scope, if any). The
+hook appends 💥 to the type emoji:
+
+    feat!: drop python 3.8         →   ✨💥 drop python 3.8
+    refactor(api)!: rename method  →   ♻️💥 api: rename method
+
+This follows the [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)
+shorthand. The `BREAKING CHANGE:` footer is **not** detected — use `!`
+in the subject line to flag breaking changes. A bare emoji subject like
+`💥 msg` is rejected; declare a type (`feat!: …`, `refactor!: …`, etc.)
+instead.
 
 ## Installation
 
