@@ -98,7 +98,10 @@ assert_rewrite "feat!: drop python 3.8"       "✨💥 drop python 3.8"        "
 assert_rewrite "feat(api): add endpoint"      "✨ api: add endpoint"        "feat: scope"
 assert_rewrite "feat(api)!: rename endpoint" "✨💥 api: rename endpoint"   "feat: scope+bang"
 
-# Second type, for variety.
+# Second type: all four shapes again.
+assert_rewrite "fix: handle null"             "🐛 handle null"              "fix: simple"
+assert_rewrite "fix!: drop legacy path"       "🐛💥 drop legacy path"       "fix: bang"
+assert_rewrite "fix(core): off-by-one"        "🐛 core: off-by-one"         "fix: scope"
 assert_rewrite "fix(core)!: drop legacy path" "🐛💥 core: drop legacy path" "fix: scope+bang"
 
 # Scope character class: hyphen, dot, slash, underscore, digit.

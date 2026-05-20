@@ -11,7 +11,7 @@ _default:
 precommit:
     jq . .claude-plugin/plugin.json > /dev/null
     jq . hooks/hooks.json > /dev/null
-    shellcheck -x scripts/*.sh
+    shellcheck -x scripts/*.sh tests/*.sh
     @echo "ok"
 
 # Run the SessionStart materializer against the current repo (dev loop)
@@ -50,5 +50,5 @@ test-uninstall:
 test-parser:
     bash tests/parser.sh
 
-# Run all integration tests.
+# Run all tests (parser unit tests + integration tests).
 test-integration: test-parser test-materialize test-uninstall
