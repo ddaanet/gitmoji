@@ -45,5 +45,10 @@ test-materialize:
 test-uninstall:
     bash tests/uninstall.sh
 
+# Unit tests for scripts/gitmoji.sh: parsing/rendering of the
+# Conventional Commits 1.0.0 first-line grammar.
+test-parser:
+    bash tests/parser.sh
+
 # Run all integration tests.
-test-integration: test-materialize test-uninstall
+test-integration: test-parser test-materialize test-uninstall
