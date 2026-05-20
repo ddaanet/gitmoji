@@ -3,7 +3,7 @@
 Living document. Captures the research, analysis, and decisions behind
 this plugin. Updated as the design evolves.
 
-Last updated: 2026-05-19.
+Last updated: 2026-05-20.
 
 ## Problem
 
@@ -135,9 +135,22 @@ plugin cache lingers) or by removing the three hook files manually.
   `gitmoji-plugin-installed` comment. The materializer refuses to
   overwrite anything without that marker; the uninstaller refuses to
   remove anything without it.
-- **Lowercase-only conventional prefixes.** The regex `^([a-z]+):\ (.*)`
-  is intentional. Mixed-case or dotted prefixes are rejected with a
-  helpful message listing valid prefixes, not silently mangled.
+- **Lowercase-only conventional prefixes.** The hook accepts the full
+  Conventional Commits 1.0.0 first-line grammar
+  `type[(scope)][!]: description`, with type matching `[a-z]+` and
+  scope matching `[a-z0-9._/-]+`. Mixed-case or dotted types,
+  uppercase scopes, and bare-emoji subjects (`💥 msg`) are rejected
+  with a helpful message listing valid prefixes, not silently mangled.
+  Empty scope (`feat(): msg`) gets a distinct error that quotes the
+  offending prefix.
+- **Scope rendering.** A parenthesised scope is preserved by
+  prepending it to the description as `<scope>: …` in the rewritten
+  subject, so reviewers don't lose it.
+- **Breaking-change rendering.** The Conventional Commits `!` marker
+  appends `💥` to the type emoji with no intervening space, so
+  `✨💥 …` reads as a single visual token. `💥` is a script-local
+  constant, not a parseable type. The `BREAKING CHANGE:` footer is
+  not inspected; see Non-goals.
 - **Already-emoji detection.** If the first line starts with a known
   emoji, the hook exits 0 without touching the message. Re-running the
   hook on the same message is safe.
@@ -194,6 +207,9 @@ place, the source of truth migrates here:
 - Non-conventional-commit prefix styles.
 - A `pre-commit` variant. `commit-msg` is the correct event for message
   rewriting (pre-commit fires before the message is composed).
+- `BREAKING CHANGE:` / `BREAKING-CHANGE:` footer detection. The hook
+  reads only the first line. Footer support is purely additive and
+  could be added later without changing the first-line grammar.
 
 ## Open questions
 
