@@ -1,5 +1,6 @@
 ---
 description: Uninstall the gitmoji commit-msg hook from the current git repository.
+allowed-tools: Bash(bash *scripts/uninstall-hook.sh)
 ---
 
 Uninstall the gitmoji `commit-msg` hook from the current repository.
