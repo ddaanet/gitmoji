@@ -1,6 +1,6 @@
 {
   "name": "gitmoji",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Commit-msg git hook that replaces conventional-commit prefixes (feat:, fix:, docs:, ...) with gitmoji emojis. Installs the per-repo hook automatically on SessionStart whenever the plugin is enabled in the current repo.",
   "author": {
     "name": "David Allouche",
