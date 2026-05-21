@@ -4,8 +4,6 @@
 # Grammar: type[(scope)][!]: description
 set -euo pipefail
 
-BOOM='💥'
-
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 msg_file="$1"
 source_type="${2:-}"
@@ -38,15 +36,13 @@ re_empty_scope='^[a-z]+\(\)!?: '
 
 if [[ "$first_line" =~ $re_full ]]; then
     prefix="${BASH_REMATCH[1]}"
-    # Optional groups: bash leaves their BASH_REMATCH slots as empty
-    # strings; `:-` is defensive for older bash + nounset interaction.
-    scope="${BASH_REMATCH[3]:-}"
-    bang="${BASH_REMATCH[4]:-}"
+    scope="${BASH_REMATCH[3]}"
+    bang="${BASH_REMATCH[4]}"
     rest="${BASH_REMATCH[5]}"
 
     if [[ -v "gitmoji[$prefix]" ]]; then
         emoji="${gitmoji[$prefix]}"
-        if [[ -n "$bang" ]]; then emoji="${emoji}${BOOM}"; fi
+        if [[ -n "$bang" ]]; then emoji="${emoji}💥"; fi
         if [[ -n "$scope" ]]; then rest="${scope}: ${rest}"; fi
         { echo "$emoji $rest"; tail -n +2 "$msg_file"; } > "$msg_file.tmp"
         mv "$msg_file.tmp" "$msg_file"
