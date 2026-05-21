@@ -77,16 +77,33 @@ CLAUDE_PROJECT_DIR="$case3" bash "$plugin_root/scripts/session-materialize.sh" \
 new_sha=$(sha256sum "$case3/.git/hooks/commit-msg" | cut -d' ' -f1)
 [ "$foreign_sha" = "$new_sha" ] || fail "case3: materializer overwrote a foreign commit-msg"
 
-# --- Scenario 4: outside a git repo. Silent exit 0.
+# --- Scenario 4: marker-tagged hook already current. Materializer
+# should still succeed (idempotent) and report the `current` state.
+case4_current="$scratch_root/case4_current"
+mkdir -p "$case4_current"
+git -C "$case4_current" init -q
+
+CLAUDE_PROJECT_DIR="$case4_current" bash "$plugin_root/scripts/session-materialize.sh" >/dev/null \
+    || fail "case4_current: first materialize exited non-zero"
+
+current_out="$(CLAUDE_PROJECT_DIR="$case4_current" bash "$plugin_root/scripts/session-materialize.sh" 2>/dev/null)" \
+    || fail "case4_current: second materialize (idempotent) exited non-zero"
+
+case "$current_out" in
+    *'"systemMessage":"gitmoji: commit-msg hook already current"'*) ;;
+    *) fail "case4_current: expected 'already current' systemMessage, got: $current_out" ;;
+esac
+
+# --- Scenario 5: outside a git repo. Silent exit 0.
 # scratch_root sits inside the plugin's own git repo, so block git's
 # walk-up via GIT_CEILING_DIRECTORIES — otherwise rev-parse would
-# resolve case4 to the plugin repo and the materializer would try to
+# resolve case5 to the plugin repo and the materializer would try to
 # write there.
-case4="$scratch_root/case4"
-mkdir -p "$case4"
+case5="$scratch_root/case5"
+mkdir -p "$case5"
 GIT_CEILING_DIRECTORIES="$scratch_root" \
-CLAUDE_PROJECT_DIR="$case4" bash "$plugin_root/scripts/session-materialize.sh" \
-    || fail "case4: materializer exited non-zero outside git repo"
-[ ! -d "$case4/.git" ] || fail "case4: materializer created a .git directory"
+CLAUDE_PROJECT_DIR="$case5" bash "$plugin_root/scripts/session-materialize.sh" \
+    || fail "case5: materializer exited non-zero outside git repo"
+[ ! -d "$case5/.git" ] || fail "case5: materializer created a .git directory"
 
 echo "PASS"
