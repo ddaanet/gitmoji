@@ -20,6 +20,10 @@ repo to edit the hook scripts, materializer, or commands.
   installs/refreshes the per-repo hook files unconditionally
 - `scripts/uninstall-hook.sh` — removes the marker-tagged hook
   files; backs `/gitmoji:uninstall` and `just uninstall`
+- `tests/parser.sh` / `materialize.sh` / `uninstall.sh` — test
+  harnesses driven by the `just test-*` recipes
+- `DESIGN.md` — living rationale for design decisions; update when
+  design choices change
 
 ## Opt-in model
 
@@ -67,7 +71,11 @@ shell entry point. Users are documented to run one of these
   are tested via `just test`.
 - The hook must remain a no-op for merge, squash, and amend commits
   (`source_type` of `merge`, `squash`, `commit`).
-- Prefix extraction regex: `^([a-z]+):\ (.*)`. Lowercase-only by design.
+- First-line grammar: `type[(scope)][!]: description`, with type
+  `[a-z]+` and scope `[a-z0-9._/-]+`. Lowercase-only by design.
+  Canonical statement and rendering rules: `DESIGN.md` →
+  "Lowercase-only conventional prefixes" / "Scope rendering" /
+  "Breaking-change rendering".
 - `jq` is **not** a runtime dependency. It is used only by
   `just precommit` to validate manifest JSON.
 
@@ -79,9 +87,11 @@ shell entry point. Users are documented to run one of these
   the current repo (dev loop for `session-materialize.sh`).
 - `just uninstall` — runs the cleanup script against the current
   repo (dev loop for `uninstall-hook.sh`).
+- `just test-parser` — unit tests for `scripts/gitmoji.sh` parsing
+  and rendering (Conventional Commits 1.0.0 first-line grammar).
 - `just test-materialize` / `just test-uninstall` /
-  `just test-integration` — integration tests covering both code
-  paths end-to-end.
+  `just test-integration` — `test-integration` runs the parser
+  unit tests plus the materializer/uninstaller integration suites.
 
 ## Non-goals
 
