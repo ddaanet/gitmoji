@@ -2,7 +2,6 @@
 .bash_profile
 .bashrc
 .gitconfig
-.gitmodules
 .mcp.json
 .profile
 .ripgreprc
