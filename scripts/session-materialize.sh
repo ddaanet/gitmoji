@@ -54,8 +54,8 @@ mkdir -p "$hooks_dir"
 if [[ -f "$target" ]] && ! grep -q "$marker" "$target" 2>/dev/null; then
     echo "gitmoji: existing commit-msg hook at $target; leaving alone (move it to enable)" >&2
     emit_hook_output \
-        "gitmoji: existing commit-msg hook left alone (move or delete to enable)" \
-        "A non-gitmoji commit-msg hook is present in this repository. The plugin refuses to overwrite it; commit-message rewriting is NOT active here until the existing hook is removed."
+        "gitmoji: existing commit-msg hook present — plugin hook not installed (inspect the existing hook)" \
+        "An existing commit-msg hook is present in this repository and was not installed by this plugin (no gitmoji-plugin-installed marker). The plugin will not overwrite it, so the plugin's gitmoji rewriting is not installed here. The existing hook may or may not perform its own rewriting — inspect it before assuming. To let the plugin manage the hook, remove the existing commit-msg hook and start a new session."
     exit 0
 fi
 

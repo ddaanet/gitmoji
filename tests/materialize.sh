@@ -71,11 +71,23 @@ EOF
 chmod +x "$case3/.git/hooks/commit-msg"
 foreign_sha=$(sha256sum "$case3/.git/hooks/commit-msg" | cut -d' ' -f1)
 
-CLAUDE_PROJECT_DIR="$case3" bash "$plugin_root/scripts/session-materialize.sh" \
+case3_out="$(CLAUDE_PROJECT_DIR="$case3" bash "$plugin_root/scripts/session-materialize.sh")" \
     || fail "case3: materializer exited non-zero on foreign hook"
 
 new_sha=$(sha256sum "$case3/.git/hooks/commit-msg" | cut -d' ' -f1)
 [ "$foreign_sha" = "$new_sha" ] || fail "case3: materializer overwrote a foreign commit-msg"
+
+# The message must state only what the script can verify: it must not
+# pre-judge the foreign hook as "non-gitmoji" nor claim rewriting is
+# "NOT active" (the foreign hook may itself rewrite). See BUGREPORT.
+case "$case3_out" in
+    *"NOT active"*)       fail "case3: message over-claims 'NOT active'" ;;
+    *"non-gitmoji"*)      fail "case3: message pre-judges hook as 'non-gitmoji'" ;;
+esac
+case "$case3_out" in
+    *"inspect it before assuming"*) ;;
+    *) fail "case3: message missing 'inspect it before assuming' caveat" ;;
+esac
 
 # --- Scenario 4: marker-tagged hook already current. Materializer
 # should still succeed (idempotent) and report the `current` state.
