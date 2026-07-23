@@ -17,6 +17,11 @@ import 'plugin-dev/release.just'
 #     without touching `.claude/settings.json`.
 #   test-parser — parsing/rendering of the Conventional Commits 1.0.0
 #     first-line grammar.
+#   test-git-states — drives real git commands to assert the hook
+#     leaves git-authored messages alone (merge, squash-merge,
+#     cherry-pick/revert conflict continuations, autosquash). The
+#     signal is a state marker in the git dir, which only exists
+#     during a real operation, so it cannot be unit-tested.
 
 # Default: list recipes
 _default:
@@ -63,5 +68,9 @@ test-uninstall:
 test-parser:
     bash tests/parser.sh
 
+# Integration test: git-authored messages survive the hook untouched
+test-git-states:
+    bash tests/git-states.sh
+
 # Run all tests (parser unit tests + integration tests).
-test-integration: test-parser test-materialize test-uninstall
+test-integration: test-parser test-git-states test-materialize test-uninstall

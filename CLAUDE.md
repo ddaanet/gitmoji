@@ -69,8 +69,12 @@ shell entry point. Users are documented to run one of these
 - `gitmoji.sh` and `gitmoji.cfg` originated in `devddaanet/scripts/`;
   this plugin is the source of truth now. Changes happen here and
   are tested via `just test`.
-- The hook must remain a no-op for merge, squash, and amend commits
-  (`source_type` of `merge`, `squash`, `commit`).
+- The hook must remain a no-op for messages git composed itself:
+  a `MERGE_HEAD` / `SQUASH_MSG` / `CHERRY_PICK_HEAD` / `REVERT_HEAD`
+  marker in `$(git rev-parse --git-dir)`, or a `fixup! ` / `squash! ` /
+  `amend! ` first line. Git passes `commit-msg` exactly one argument,
+  so there is no source-type parameter to test — see `DESIGN.md` →
+  "Git-authored message skipping". Covered by `just test-git-states`.
 - First-line grammar: `type[(scope)][!]: description`, with type
   `[a-z]+` and scope `[a-z0-9._/-]+`. Lowercase-only by design.
   Canonical statement and rendering rules: `DESIGN.md` →

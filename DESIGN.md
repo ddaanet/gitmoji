@@ -3,7 +3,7 @@
 Living document. Captures the research, analysis, and decisions behind
 this plugin. Updated as the design evolves.
 
-Last updated: 2026-05-20.
+Last updated: 2026-07-23.
 
 ## Problem
 
@@ -154,8 +154,35 @@ plugin cache lingers) or by removing the three hook files manually.
 - **Already-emoji detection.** If the first line starts with a known
   emoji, the hook exits 0 without touching the message. Re-running the
   hook on the same message is safe.
-- **Merge/squash/amend skipping.** The hook exits 0 for these source
-  types, so the plugin never corrupts merge commit messages.
+- **Git-authored message skipping.** When git composes the message
+  itself, the hook exits 0 and leaves it byte-for-byte alone. Rejecting
+  such a message strands the operation — a rejected merge reports
+  `Not committing merge; use 'git commit' to complete the merge` and
+  leaves it staged but uncommitted. Two signals, because neither covers
+  everything:
+  - A state marker in `$(git rev-parse --git-dir)`: `MERGE_HEAD`,
+    `SQUASH_MSG`, `CHERRY_PICK_HEAD`, or `REVERT_HEAD`. Each is
+    cleared by the commit or the `--abort` that ends its operation, so
+    a marker can never outlive its operation and silently disable the
+    hook for later commits.
+  - A `fixup! ` / `squash! ` / `amend! ` first line. Autosquash
+    subjects carry no marker, so the message is the only signal.
+
+  Nothing else suffices. Git passes `commit-msg` **exactly one
+  argument**, so there is no source-type to consult — the `$2`-based
+  `case` this replaced was written to `prepare-commit-msg` semantics
+  and never once matched in production. The message file is
+  `COMMIT_EDITMSG`, not `MERGE_MSG`, whenever a conflicted or
+  interrupted merge is completed by hand, so the file's basename is
+  not a sufficient test either. `GIT_DIR` is not exported into the
+  hook environment, hence `git rev-parse`.
+
+  Clean `revert`, clean `cherry-pick`, and `rebase --continue` need no
+  handling: they never invoke the `commit-msg` hook at all. Only their
+  conflict continuations do, which is where the markers apply.
+  `--amend` and rebase `reword` do invoke it, but are handed the
+  commit's existing message, which already carries an emoji and exits
+  via the round-trip check above.
 
 ## Dependencies
 

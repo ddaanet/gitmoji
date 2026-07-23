@@ -7,8 +7,17 @@ set -euo pipefail
 plugin_root="$(cd "$(dirname "$0")/.." && pwd)"
 hook="$plugin_root/scripts/gitmoji.sh"
 
-scratch="$(mktemp -d "$plugin_root/.test-parser-XXXXXX")"
+# Kept outside the plugin's working tree, and every hook invocation
+# runs with cwd here. The hook consults `git rev-parse --git-dir` to
+# detect an in-progress merge/cherry-pick/revert; run from inside the
+# plugin's own repo it would read whatever state that repo happens to
+# be in, so a `just test-parser` during a merge would make every case
+# below pass as a silent skip. GIT_CEILING_DIRECTORIES stops git from
+# walking up out of the scratch dir to find one.
+scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
+
+run_hook() { (cd "$scratch" && GIT_CEILING_DIRECTORIES="$scratch" bash "$hook" "$@"); }
 
 fail=0
 total=0
@@ -18,7 +27,7 @@ assert_rewrite() {
     total=$((total+1))
     local f="$scratch/msg-$total"
     printf '%s\n' "$input" > "$f"
-    if ! bash "$hook" "$f" 2>/dev/null; then
+    if ! run_hook "$f" 2>/dev/null; then
         echo "FAIL: $name (hook exited non-zero on '$input')"
         fail=$((fail+1)); return
     fi
@@ -39,7 +48,7 @@ assert_skip() {
     total=$((total+1))
     local f="$scratch/msg-$total"
     printf '%s\n' "$input" > "$f"
-    if ! bash "$hook" "$f" 2>/dev/null; then
+    if ! run_hook "$f" 2>/dev/null; then
         echo "FAIL: $name (hook exited non-zero)"
         fail=$((fail+1)); return
     fi
@@ -60,7 +69,7 @@ assert_reject() {
     local f="$scratch/msg-$total"
     printf '%s\n' "$input" > "$f"
     local stderr
-    if stderr="$(bash "$hook" "$f" 2>&1 >/dev/null)"; then
+    if stderr="$(run_hook "$f" 2>&1 >/dev/null)"; then
         echo "FAIL: $name (hook accepted '$input')"
         fail=$((fail+1)); return
     fi
@@ -70,24 +79,6 @@ assert_reject() {
         echo "FAIL: $name (stderr missing '$want_stderr')"
         echo "  input:  $input"
         echo "  stderr: $stderr"
-        fail=$((fail+1))
-    fi
-}
-
-assert_source_type_skip() {
-    local input="$1" source_type="$2" name="$3"
-    total=$((total+1))
-    local f="$scratch/msg-$total"
-    printf '%s\n' "$input" > "$f"
-    if ! bash "$hook" "$f" "$source_type" 2>/dev/null; then
-        echo "FAIL: $name (hook exited non-zero, source_type=$source_type)"
-        fail=$((fail+1)); return
-    fi
-    local got; got="$(head -n1 "$f")"
-    if [ "$got" = "$input" ]; then
-        echo "PASS: $name"
-    else
-        echo "FAIL: $name (source_type=$source_type rewrote message)"
         fail=$((fail+1))
     fi
 }
@@ -126,10 +117,15 @@ assert_reject "feat(BAD): msg"  "Missing or malformed" "reject: uppercase scope"
 assert_reject "feat: "          "Missing or malformed" "reject: empty description"
 assert_reject "feat msg"        "Missing or malformed" "reject: no colon"
 
-# --- Source-type skips (merge / squash / amend remain no-ops).
-assert_source_type_skip "feat: foo" "merge"  "source: merge no-op"
-assert_source_type_skip "feat: foo" "squash" "source: squash no-op"
-assert_source_type_skip "feat: foo" "commit" "source: commit (amend) no-op"
+# --- Autosquash subjects are git's, not ours. These carry no git-dir
+# state marker, so the first line is the only available signal.
+assert_skip "fixup! feat: base"  "autosquash: fixup!"
+assert_skip "squash! feat: base" "autosquash: squash!"
+assert_skip "amend! feat: base"  "autosquash: amend!"
+
+# The trailing space is load-bearing: without it the regex would be a
+# prefix match that swallows unrelated subjects.
+assert_reject "fixup!x" "Missing or malformed" "autosquash: no bare fixup!x"
 
 echo
 if [ "$fail" -gt 0 ]; then
