@@ -1,5 +1,10 @@
 {
   "enabledPlugins": {
-    "revdiff-planning@revdiff": true
+    "revdiff-planning@revdiff": true,
+    "handoff@ddaanet": true
+  },
+  "gitlore": {
+    "enabled": true,
+    "precommitCommand": "just precommit"
   }
 }
