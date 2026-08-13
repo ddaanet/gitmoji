@@ -8,7 +8,7 @@
 
 **Tech Stack:** Bash, jq (dev-only; removed from runtime path), `just` recipes, `claude -p` for integration tests.
 
-**Spec:** `docs/superpowers/specs/2026-05-19-drop-enabled-flag-design.md`
+**Spec:** `2026-05-19-drop-enabled-flag-design.md`
 
 ---
 

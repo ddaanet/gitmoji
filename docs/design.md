@@ -1,9 +1,8 @@
 # gitmoji — Design
 
-Living document. Captures the research, analysis, and decisions behind
-this plugin. Updated as the design evolves.
-
-Last updated: 2026-07-23.
+Living design document. Updated when meaningful design decisions land
+or get overturned. Not a changelog of features — a record of *why this
+plugin has the shape it has*.
 
 ## Problem
 
@@ -57,15 +56,6 @@ Three operational shapes fall out:
 - **Plugin not enabled in scope**: SessionStart doesn't fire. Any
   hook materialized in a previous session persists in `.git/hooks/`
   until manually removed.
-
-An earlier design used a bespoke plugin-owned flag
-(`pluginConfigs["gitmoji@ddaanet"].options.enabled`) for per-repo
-opt-in on top of a globally-enabled plugin. That two-lever model
-was dropped: it duplicated `enabledPlugins`, ran afoul of Claude
-Code's auto-mode classifier hard-blocking agent edits to
-`.claude/settings.json`, and produced a footgun where a more-
-specific override layer could silently tear down a working hook
-on SessionStart.
 
 ## Materialization
 

@@ -22,8 +22,12 @@ repo to edit the hook scripts, materializer, or commands.
   files; backs `/gitmoji:uninstall` and `just uninstall`
 - `tests/parser.sh` / `materialize.sh` / `uninstall.sh` — test
   harnesses driven by the `just test-*` recipes
-- `DESIGN.md` — living rationale for design decisions; update when
-  design choices change
+- `docs/design.md` — living rationale for every design decision.
+  States what the plugin *is*. Update when design choices change.
+- `docs/changelog.md` — index of write-time records, newest first,
+  one line per entry. Bodies live in `docs/changelog/YYYY-MM-DD-slug.md`.
+- `plans/` — specs and implementation plans. Prospective content
+  only; `docs/` holds what is true now.
 
 ## Opt-in model
 
@@ -73,11 +77,11 @@ shell entry point. Users are documented to run one of these
   a `MERGE_HEAD` / `SQUASH_MSG` / `CHERRY_PICK_HEAD` / `REVERT_HEAD`
   marker in `$(git rev-parse --git-dir)`, or a `fixup! ` / `squash! ` /
   `amend! ` first line. Git passes `commit-msg` exactly one argument,
-  so there is no source-type parameter to test — see `DESIGN.md` →
+  so there is no source-type parameter to test — see `docs/design.md` →
   "Git-authored message skipping". Covered by `just test-git-states`.
 - First-line grammar: `type[(scope)][!]: description`, with type
   `[a-z]+` and scope `[a-z0-9._/-]+`. Lowercase-only by design.
-  Canonical statement and rendering rules: `DESIGN.md` →
+  Canonical statement and rendering rules: `docs/design.md` →
   "Lowercase-only conventional prefixes" / "Scope rendering" /
   "Breaking-change rendering".
 - `jq` is **not** a runtime dependency. It is used only by

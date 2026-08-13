@@ -8,7 +8,7 @@
 
 **Tech Stack:** bash, shellcheck.
 
-**Spec:** [`docs/superpowers/specs/2026-05-20-conventional-commit-parser-design.md`](../specs/2026-05-20-conventional-commit-parser-design.md).
+**Spec:** [`2026-05-20-conventional-commit-parser-design.md`](2026-05-20-conventional-commit-parser-design.md).
 
 ---
 
