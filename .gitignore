@@ -19,3 +19,5 @@
 # Integration test scratch directories (mktemp -d under cwd)
 .test-uninstall-*
 .test-materialize-*
+
+/dist/plugin/
