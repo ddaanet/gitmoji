@@ -12,11 +12,7 @@
       }
     ]
   },
-  "enabledPlugins": {
-    "gitmoji@ddaanet": true,
-    "superpowers@claude-plugins-official": true,
-    "gitlore@ddaanet": true
-  },
+  "enabledPlugins": {},
   "pluginConfigs": {
     "gitmoji@ddaanet": {
       "options": {
