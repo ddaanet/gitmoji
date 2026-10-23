@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# gitmoji-plugin-installed
+exec "$(dirname "$0")/gitmoji.sh" "$@"
