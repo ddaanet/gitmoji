@@ -93,22 +93,24 @@ live then depends on what changed:
   `just dogfood`, exit and relaunch `claude`; `claude -c` keeps the
   conversation.
 - **Commands, `.mcp.json` and output styles** — after `/reload-plugins` in the
-  session, like skill bodies: a changed or new command, the plugin's MCP
-  servers and a style's body (from the next turn) all go live. A relaunch after
+  session, like skill bodies: a changed or new command, the plugin's MCP servers
+  and a style's body (from the next turn) all go live. A relaunch after
   `just dogfood` does too, since it re-reads everything Claude Code reads at
   start.
 
 The sync copies everything git does not ignore, tracked or not, minus every
 `.git` and `dist/plugin/` itself, and deletes from the copy what left the
 source. What an initialised submodule ignores through its own rules stays out
-too. It refuses to run without `.claude-plugin/plugin.json` at the root, when
-git does not ignore `dist/plugin/`, and when an ignored path's name holds `*`,
-`?`, `[`, `]` or a backslash, naming that path, and without `rsync` on PATH;
-each refusal leaves `dist/` untouched. A git error listing the root or an
-initialised submodule stops the sync with git's own message, `dist/` untouched.
-rsync's own errors are shown as they come, and a failure exits non-zero. A file
-vanishing mid-sync, or two syncs colliding, fails the same way; a re-run
-repairs it.
+too. With a [`dist.include`](dist-branch.md) at the root, it copies only the
+paths that allowlist names, still minus ignored paths, so a file it does not
+list never reaches the copy. It refuses to run without
+`.claude-plugin/plugin.json` at the root, when git does not ignore
+`dist/plugin/`, and when an ignored path's name holds `*`, `?`, `[`, `]` or a
+backslash, naming that path, and without `rsync` on PATH; each refusal leaves
+`dist/` untouched. A git error listing the root or an initialised submodule
+stops the sync with git's own message, `dist/` untouched. rsync's own errors are
+shown as they come, and a failure exits non-zero. A file vanishing mid-sync, or
+two syncs colliding, fails the same way; a re-run repairs it.
 
 Run `just dogfood` from your own shell, not through an agent's Bash tool,
 whether or not your plugin ships a `.mcp.json`. The command sandbox masks a set
@@ -147,9 +149,8 @@ version-guard:
   copy and the session started past the shim. The third means the copy exists
   but the session started past the shim (no direnv, an IDE or the desktop app,
   an absolute path to `claude`), or inherited another repo's
-  `CLAUDE_CODE_PLUGIN_DIRS`, as a `claude` started from another plugin's
-  dogfood session does. `direnv allow` loads the `.envrc` that puts the shim
-  first on PATH. The agent never sees these lines: it gets the finding as a
-  fact with no command to run, and nothing for the fourth. After the fourth,
-  Claude Code's
+  `CLAUDE_CODE_PLUGIN_DIRS`, as a `claude` started from another plugin's dogfood
+  session does. `direnv allow` loads the `.envrc` that puts the shim first on
+  PATH. The agent never sees these lines: it gets the finding as a fact with no
+  command to run, and nothing for the fourth. After the fourth, Claude Code's
   own sensitive-file prompt still stops a copy edit.
