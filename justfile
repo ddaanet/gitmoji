@@ -28,7 +28,7 @@ _default:
     @just --list
 
 # Lint manifests + hooks.json, run shellcheck on scripts
-precommit: check-refs
+precommit: check-refs check-size
     jq . .claude-plugin/plugin.json > /dev/null
     jq . hooks/hooks.json > /dev/null
     shellcheck -x scripts/*.sh tests/*.sh
