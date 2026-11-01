@@ -65,7 +65,7 @@ Three operational shapes fall out:
   materialized. Auto-install-on-clone works without any explicit
   per-clone step from teammates.
 - **Plugin not enabled in scope**: SessionStart doesn't fire. Any
-  hook materialized in a previous session persists in `.git/hooks/`
+  hook materialized in a previous session persists in the hooks dir
   until manually removed.
 
 ## Materialization
@@ -74,15 +74,18 @@ On every Claude Code session in a repo where the plugin is enabled,
 `hooks/hooks.json` fires the SessionStart event, which runs
 `scripts/session-materialize.sh`. That script:
 
-1. Resolves the repo root from `${CLAUDE_PROJECT_DIR}`.
+1. Locates the repo from `${CLAUDE_PROJECT_DIR}`.
 2. If not inside a git repo: silent exit 0.
-3. If `.git/hooks/commit-msg` exists without the
+3. If `core.hooksPath` is set: install and write nothing, emit a
+   status line and agent context saying so, exit 0 (see "Where the
+   hook is installed").
+4. If `<hooks dir>/commit-msg` exists without the
    `gitmoji-plugin-installed` marker: leave it in place, emit a
    status line and agent context, exit 0 (refuse to clobber an
    unrelated user hook).
-4. Otherwise: copy `gitmoji.sh`, `gitmoji.cfg`, and
+5. Otherwise: copy `gitmoji.sh`, `gitmoji.cfg`, and
    `commit-msg.template` from `${CLAUDE_PLUGIN_ROOT}/scripts/`
-   into `.git/hooks/`, `chmod +x` the executables, and emit a
+   into `<hooks dir>/`, `chmod +x` the executables, and emit a
    status line (installed / refreshed / already current) plus
    agent context.
 
@@ -93,6 +96,31 @@ imitates the emoji-prefixed `git log` it already sees. The text is
 the same in every installing state and carries no uninstall pointer.
 For a foreign hook it only directs the agent to read that hook: no
 offer to remove it and no marker name.
+
+### Where the hook is installed
+
+`<hooks dir>` is `$(git rev-parse --path-format=absolute
+--git-common-dir)/hooks`, git's default hooks directory. It is not
+`<toplevel>/.git/hooks`: in a linked worktree and in a submodule
+`.git` is a file, so that path does not exist. The common dir is
+shared by every worktree of a repo, so one installation covers them
+all and the hook files have a single owner. A submodule has its own
+git dir under the superproject's `.git/modules/<name>`, so it gets
+its own hook files there and the superproject's are untouched.
+
+A repo with `core.hooksPath` set (husky, lefthook) is treated as
+running its own hooks. Git no longer reads the default hooks dir
+there, so a hook installed in it would never fire while the agent
+was told it adds the emoji. The path the setting names is usually a
+checked-in directory owned by another tool, which is not the
+plugin's to write to. The plugin therefore installs nothing, and
+the agent context says that nothing adds emoji, so the agent
+follows the repo's own commit-message convention.
+
+The uninstaller resolves the same common hooks dir and ignores
+`core.hooksPath`. That dir is the only place the plugin ever
+installs, so a hook left there from before the setting appeared is
+still removable.
 
 Per-repo hook files are thus a **cache**, regenerated from the
 plugin version running in the current session. Plugin upgrades
@@ -228,7 +256,7 @@ manifest JSON, but that is a development concern only.
   point. Runs on every SessionStart when the plugin is enabled in
   the current scope. Never tears down. Idempotent. No jq.
 - **`scripts/uninstall-hook.sh`**: removes the marker-tagged hook
-  files from the current repo. Backs both `/gitmoji:uninstall`
+  files from the current repo's common hooks dir. Backs both `/gitmoji:uninstall`
   and `just uninstall`. Idempotent. Runnable from any shell —
   remains usable after the plugin has been disabled in Claude
   Code, since the plugin cache persists until the user clears it.

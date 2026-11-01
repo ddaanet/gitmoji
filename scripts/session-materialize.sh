@@ -4,8 +4,8 @@
 # repos where the plugin is enabled (resolved via Claude Code's
 # enabledPlugins). When this script runs, the plugin is enabled here,
 # so install unconditionally; never tear down. Refuses to overwrite a
-# foreign commit-msg without the `gitmoji-plugin-installed` marker.
-# Idempotent.
+# foreign commit-msg without the `gitmoji-plugin-installed` marker, and
+# installs nothing where core.hooksPath is set. Idempotent.
 #
 # Output protocol:
 # - stderr: human-readable line including the target path (kept for
@@ -19,12 +19,14 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 
 project_dir="${CLAUDE_PROJECT_DIR:-$PWD}"
-repo_root="$(git -C "$project_dir" rev-parse --show-toplevel 2>/dev/null || true)"
-if [[ -z "$repo_root" ]]; then
+if ! git -C "$project_dir" rev-parse --show-toplevel >/dev/null 2>&1; then
     exit 0
 fi
 
-hooks_dir="$repo_root/.git/hooks"
+# The default hooks dir, shared by every linked worktree of a repo; a
+# submodule's lives under the superproject's .git/modules. `.git` is a
+# file in both, so "<toplevel>/.git/hooks" is not a path there.
+hooks_dir="$(git -C "$project_dir" rev-parse --path-format=absolute --git-common-dir)/hooks"
 target="$hooks_dir/commit-msg"
 marker="gitmoji-plugin-installed"
 
@@ -47,6 +49,17 @@ emit_hook_output() {
         "$(json_escape "$context")" \
         "$(json_escape "$system_msg")"
 }
+
+# core.hooksPath (husky, lefthook) moves git's hooks elsewhere, usually
+# into a checked-in directory another tool owns. Installing in
+# $hooks_dir would be dead code, and writing there is not ours to do.
+if [[ -n "$(git -C "$project_dir" config --get core.hooksPath || true)" ]]; then
+    echo "gitmoji: core.hooksPath is set; leaving this repository's hooks alone" >&2
+    emit_hook_output \
+        "gitmoji: repository uses core.hooksPath — plugin hook not installed" \
+        "This repository runs its own git hooks, so the gitmoji commit-msg hook is not installed and nothing adds emoji to commit messages. Follow this repository's own commit-message convention."
+    exit 0
+fi
 
 mkdir -p "$hooks_dir"
 

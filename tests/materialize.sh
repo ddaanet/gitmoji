@@ -2,7 +2,9 @@
 # Integration test: scripts/session-materialize.sh installs the
 # commit-msg hook unconditionally when run inside a git repo, with
 # NO settings.json flag present. Refuses to clobber a non-marker
-# commit-msg. Silent no-op outside a git repo.
+# commit-msg. Silent no-op outside a git repo. Installs into the
+# common hooks dir for linked worktrees and submodules; leaves repos
+# with core.hooksPath alone.
 set -euo pipefail
 
 plugin_root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -29,6 +31,13 @@ assert_act_context() {
         *"rewritten"*) fail "$label: context narrates the rewrite" ;;
         *"uninstall"*) fail "$label: context offers uninstall to the agent" ;;
     esac
+}
+
+# Make an empty commit with a fixed identity (hermetic: no reliance on
+# the user's git config).
+commit_empty() {
+    git -C "$1" -c user.name="gitmoji test" -c user.email=test@example.com \
+        commit -q --allow-empty -m "feat: seed"
 }
 
 # --- Scenario 1: fresh git repo, no settings.json flag.
@@ -151,5 +160,91 @@ GIT_CEILING_DIRECTORIES="$scratch_root" \
 CLAUDE_PROJECT_DIR="$case5" bash "$plugin_root/scripts/session-materialize.sh" \
     || fail "case5: materializer exited non-zero outside git repo"
 [ ! -d "$case5/.git" ] || fail "case5: materializer created a .git directory"
+
+# --- Scenario 6: linked worktree. `.git` there is a file, so the hook
+# must land in the common hooks dir of the main repo, shared by every
+# worktree. The uninstaller, run from the worktree, removes it there.
+case6="$scratch_root/case6"
+case6_wt="$scratch_root/case6_wt"
+mkdir -p "$case6"
+git -C "$case6" init -q
+commit_empty "$case6"
+git -C "$case6" worktree add -q "$case6_wt" -b case6-wt
+[ -f "$case6_wt/.git" ] || fail "case6: fixture worktree has no .git file"
+
+case6_out="$(CLAUDE_PROJECT_DIR="$case6_wt" bash "$plugin_root/scripts/session-materialize.sh" 2>/dev/null)" \
+    || fail "case6: materializer exited non-zero in a linked worktree"
+assert_act_context case6 "$case6_out"
+case "$case6_out" in
+    *'"systemMessage":"gitmoji: installed commit-msg hook"'*) ;;
+    *) fail "case6: expected 'installed' systemMessage, got: $case6_out" ;;
+esac
+for f in commit-msg gitmoji.sh gitmoji.cfg; do
+    [ -f "$case6/.git/hooks/$f" ] || fail "case6: $f not in the main repo's hooks dir"
+done
+
+# Seed the common hooks dir directly so the uninstaller check does not
+# depend on the materializer assertions above.
+cp "$plugin_root/scripts/gitmoji.sh" "$plugin_root/scripts/gitmoji.cfg" "$case6/.git/hooks/"
+cp "$plugin_root/scripts/commit-msg.template" "$case6/.git/hooks/commit-msg"
+(cd "$case6_wt" && bash "$plugin_root/scripts/uninstall-hook.sh" >/dev/null) \
+    || fail "case6: uninstaller exited non-zero in a linked worktree"
+for f in commit-msg gitmoji.sh gitmoji.cfg; do
+    [ ! -e "$case6/.git/hooks/$f" ] || fail "case6: uninstaller left $f in the common hooks dir"
+done
+
+# --- Scenario 7: submodule. `.git` is a file pointing into the
+# superproject's .git/modules/<name>; hooks install there.
+case7_origin="$scratch_root/case7_origin"
+case7="$scratch_root/case7"
+mkdir -p "$case7_origin" "$case7"
+git -C "$case7_origin" init -q
+commit_empty "$case7_origin"
+git -C "$case7" init -q
+git -C "$case7" -c protocol.file.allow=always submodule add -q "$case7_origin" mod \
+    || fail "case7: fixture submodule add failed"
+[ -f "$case7/mod/.git" ] || fail "case7: fixture submodule has no .git file"
+
+case7_out="$(CLAUDE_PROJECT_DIR="$case7/mod" bash "$plugin_root/scripts/session-materialize.sh" 2>/dev/null)" \
+    || fail "case7: materializer exited non-zero in a submodule"
+assert_act_context case7 "$case7_out"
+for f in commit-msg gitmoji.sh gitmoji.cfg; do
+    [ -f "$case7/.git/modules/mod/hooks/$f" ] || fail "case7: $f not under .git/modules/mod/hooks"
+    [ ! -e "$case7/.git/hooks/$f" ] || fail "case7: $f leaked into the superproject's hooks dir"
+done
+
+# --- Scenario 8: core.hooksPath set (husky, lefthook). The repo runs
+# its own hooks; install nothing, write nothing, say so.
+case8="$scratch_root/case8"
+mkdir -p "$case8"
+git -C "$case8" init -q
+git -C "$case8" config core.hooksPath .husky
+case8_before="$(ls -A "$case8/.git/hooks")"
+
+case8_out="$(CLAUDE_PROJECT_DIR="$case8" bash "$plugin_root/scripts/session-materialize.sh" 2>"$scratch_root/case8.err")" \
+    || fail "case8: materializer exited non-zero with core.hooksPath set"
+case "$case8_out" in
+    *'"systemMessage":"gitmoji: repository uses core.hooksPath — plugin hook not installed"'*) ;;
+    *) fail "case8: wrong systemMessage, got: $case8_out" ;;
+esac
+case "$case8_out" in
+    *'"additionalContext":"This repository runs its own git hooks, so the gitmoji commit-msg hook is not installed and nothing adds emoji to commit messages. Follow this repository'"'"'s own commit-message convention."'*) ;;
+    *) fail "case8: wrong additionalContext, got: $case8_out" ;;
+esac
+[ "$(cat "$scratch_root/case8.err")" = "gitmoji: core.hooksPath is set; leaving this repository's hooks alone" ] \
+    || fail "case8: wrong stderr, got: $(cat "$scratch_root/case8.err")"
+[ "$(ls -A "$case8/.git/hooks")" = "$case8_before" ] || fail "case8: .git/hooks changed"
+[ ! -e "$case8/.husky" ] || fail "case8: materializer created .husky"
+
+# --- Scenario 9: hook left in .git/hooks from before core.hooksPath was
+# set. The uninstaller still removes it: the common hooks dir is the
+# only place the plugin ever installs.
+cp "$plugin_root/scripts/gitmoji.sh" "$plugin_root/scripts/gitmoji.cfg" "$case8/.git/hooks/"
+cp "$plugin_root/scripts/commit-msg.template" "$case8/.git/hooks/commit-msg"
+(cd "$case8" && bash "$plugin_root/scripts/uninstall-hook.sh" >/dev/null) \
+    || fail "case9: uninstaller exited non-zero with core.hooksPath set"
+for f in commit-msg gitmoji.sh gitmoji.cfg; do
+    [ ! -e "$case8/.git/hooks/$f" ] || fail "case9: uninstaller left $f behind"
+done
 
 echo "PASS"

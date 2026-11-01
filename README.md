@@ -62,7 +62,11 @@ That enables the plugin at user scope (`~/.claude/settings.json`
 gets `enabledPlugins["gitmoji@ddaanet"] = true`). The plugin's
 SessionStart hook then installs `.git/hooks/commit-msg` in every
 repo you open in Claude Code, so commit messages get rewritten
-everywhere.
+everywhere. In a linked worktree the hook goes to the main repo's
+`.git/hooks/`, shared by all its worktrees; a submodule gets its own
+under the superproject's `.git/modules/<name>/hooks/`. A repo that
+sets `core.hooksPath` (husky, lefthook) runs its own hooks, so the
+plugin installs nothing there and tells the agent so.
 
 ### Per-repo opt-in (team-shared)
 

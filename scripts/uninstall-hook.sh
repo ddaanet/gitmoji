@@ -6,13 +6,16 @@
 # the plugin.
 set -euo pipefail
 
-repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-if [[ -z "$repo_root" ]]; then
+common_dir="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+if [[ -z "$common_dir" ]]; then
     echo "not inside a git repository" >&2
     exit 1
 fi
 
-hooks_dir="$repo_root/.git/hooks"
+# The default hooks dir (shared by linked worktrees), regardless of
+# core.hooksPath: it is the only place the plugin ever installs, so a
+# hook left from before hooksPath was set is still removable.
+hooks_dir="$common_dir/hooks"
 target="$hooks_dir/commit-msg"
 marker="gitmoji-plugin-installed"
 

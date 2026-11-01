@@ -64,6 +64,12 @@ shell entry point. Users are documented to run one of these
 - `session-materialize.sh` always installs/refreshes when it runs.
   Never tears down, never reads any settings key. If it runs, the
   plugin is enabled here.
+- The hooks dir is `$(git rev-parse --path-format=absolute
+  --git-common-dir)/hooks`, never `<toplevel>/.git/hooks` (`.git` is
+  a file in worktrees and submodules). With `core.hooksPath` set the
+  materializer installs nothing; the uninstaller still targets the
+  common hooks dir. See `docs/design.md` → "Where the hook is
+  installed".
 - The per-repo `commit-msg` wrapper must carry the
   `gitmoji-plugin-installed` marker. The materializer refuses to
   overwrite a `commit-msg` without the marker; the uninstaller
