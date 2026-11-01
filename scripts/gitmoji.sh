@@ -78,7 +78,7 @@ if [[ "$first_line" =~ $re_full ]]; then
     fi
 elif [[ "$first_line" =~ $re_empty_scope ]]; then
     bad_prefix="${first_line%%(*}"
-    reject "Empty scope in '${bad_prefix}()'."
+    reject "Empty scope in '${bad_prefix}()'. Fill in the scope or drop the parentheses."
 else
     reject "Missing or malformed conventional commit prefix."
 fi

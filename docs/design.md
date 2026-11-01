@@ -188,10 +188,11 @@ plugin cache lingers) or by removing the three hook files manually.
   stating the act: write the first line as
   `type[(scope)][!]: description`, with no emoji, because the hook adds
   the emoji. The line is identical for every rejection and comes last
-  so that output truncated with `| tail` keeps it. Agents imitate the
-  emoji-led subjects they see in `git log`; an error that only
-  diagnoses gets a swapped emoji or an unchanged re-send, while one
-  that states the act gets a conventional prefix. The hook does not
+  so that output truncated with `| tail` keeps it. Agents copy the
+  emoji-led subjects they see in `git log`: in session logs, 6 of 22
+  emoji-led subjects rejected by a diagnosis-only error were retried
+  with a swapped emoji or re-sent unchanged, the re-sends where
+  `| tail` had cut the diagnosis. The hook does not
   try to recognise emoji-led subjects, since the act line serves every
   malformed subject alike.
 - **Scope rendering.** A parenthesised scope is preserved by
