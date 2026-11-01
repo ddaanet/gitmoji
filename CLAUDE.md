@@ -111,3 +111,5 @@ shell entry point. Users are documented to run one of these
   the correct event for message rewriting.
 - A plugin-owned opt-in flag. `enabledPlugins` is the only opt-in;
   the plugin does not introduce a parallel surface.
+
+@memory/ddaanet/shared-claude.md
