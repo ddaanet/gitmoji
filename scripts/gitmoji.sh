@@ -47,6 +47,15 @@ list_prefixes() {
     printf '%s\n' "${!gitmoji[@]}" | sort | sed 's/^/  /'
 }
 
+# An emoji-led subject means the writer copied the rewritten form from
+# git log. Emoji are 4-byte UTF-8 (lead byte f0) or sit in U+2600-27BF
+# (e2 98..9e); accented letters and punctuation fall outside both.
+starts_with_emoji() {
+    local b
+    b="$(printf '%s' "$first_line" | head -c 2 | od -An -tx1 | tr -d ' \n')"
+    [[ "$b" == f0* || "$b" =~ ^e29[89a-e] ]]
+}
+
 re_full='^([a-z]+)(\(([a-z0-9._/-]+)\))?(!)?: (.+)$'
 re_empty_scope='^[a-z]+\(\)!?: '
 
@@ -70,6 +79,11 @@ if [[ "$first_line" =~ $re_full ]]; then
 elif [[ "$first_line" =~ $re_empty_scope ]]; then
     bad_prefix="${first_line%%(*}"
     echo "Empty scope in '${bad_prefix}()'. Scope must be non-empty. Valid prefixes:" >&2
+    list_prefixes >&2
+    exit 1
+elif starts_with_emoji; then
+    echo "Commit subject starts with an emoji. Write a conventional prefix instead: type[(scope)][!]: description. The hook adds the emoji." >&2
+    echo "Valid prefixes:" >&2
     list_prefixes >&2
     exit 1
 else

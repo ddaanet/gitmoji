@@ -107,7 +107,11 @@ assert_skip "✨ already done"           "skip: type emoji"
 assert_skip "✨💥 already done"         "skip: type+boom (round-trip)"
 
 # --- Rejections (each error branch).
-assert_reject "💥 break things" "Missing or malformed" "reject: bare boom"
+assert_reject "💥 break things" "starts with an emoji" "reject: bare boom names the emoji"
+assert_reject "🔥 remove dead code" "Write a conventional prefix instead" "reject: unmapped emoji names the act"
+assert_reject "☕ coffee"        "starts with an emoji" "reject: BMP symbol emoji"
+assert_reject "Écrire la doc"   "Missing or malformed" "reject: accented letter is not an emoji"
+assert_reject "… trailing"      "Missing or malformed" "reject: punctuation is not an emoji"
 assert_reject "xyz: msg"        "Unknown prefix"       "reject: unknown type"
 assert_reject "feat(): msg"     "Empty scope"          "reject: empty scope"
 assert_reject "feat()!: msg"    "Empty scope"          "reject: empty scope + bang"
