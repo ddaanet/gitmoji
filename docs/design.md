@@ -46,8 +46,9 @@ Why there is no plugin-owned opt-in flag (for example a
 a globally enabled plugin):
 
 - It duplicates `enabledPlugins`, giving two levers for one decision.
-- Setting it means editing `.claude/settings.json`, which Claude
-  Code's auto-mode classifier hard-blocks for agents.
+- Agents cannot set it: Claude Code's auto-mode classifier
+  hard-blocks agent edits to `.claude/settings.json`, whereas
+  `enabledPlugins` is toggled by the user through `/plugin`.
 - A more specific override layer could silently flip it and make
   SessionStart tear down a working hook.
 
