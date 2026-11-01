@@ -54,7 +54,7 @@ if [[ -f "$target" ]] && ! grep -q "$marker" "$target" 2>/dev/null; then
     echo "gitmoji: existing commit-msg hook at $target; leaving alone (move it to enable)" >&2
     emit_hook_output \
         "gitmoji: existing commit-msg hook present — plugin hook not installed (inspect the existing hook)" \
-        "An existing commit-msg hook is present in this repository and was not installed by this plugin (no gitmoji-plugin-installed marker). The plugin will not overwrite it, so the plugin's gitmoji rewriting is not installed here. The existing hook may or may not perform its own rewriting — inspect it before assuming. To let the plugin manage the hook, remove the existing commit-msg hook and start a new session."
+        "The commit-msg hook in this repository was not installed by the gitmoji plugin and was left in place. Read it to learn what commit-message form it expects; inspect it before assuming it adds emoji."
     exit 0
 fi
 

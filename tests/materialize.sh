@@ -106,6 +106,13 @@ case "$case3_out" in
     *"inspect it before assuming"*) ;;
     *) fail "case3: message missing 'inspect it before assuming' caveat" ;;
 esac
+# The agent channel must not offer removing someone else's hook, nor
+# name the marker that would let the agent adopt it.
+case "$case3_out" in
+    *"remove"*)                   fail "case3: context offers removing the foreign hook" ;;
+    *"gitmoji-plugin-installed"*) fail "case3: context names the ownership marker" ;;
+    *"Start each commit message"*) fail "case3: context claims the plugin's act" ;;
+esac
 
 # --- Scenario 4: marker-tagged hook already current. Materializer
 # should still succeed (idempotent) and report the `current` state.
