@@ -33,7 +33,7 @@ precommit: check-refs check-size
     jq . .claude-plugin/plugin.json > /dev/null
     jq . hooks/hooks.json > /dev/null
     shellcheck -x scripts/*.sh tests/*.sh
-    @echo "ok"
+    @echo "precommit: passed check-refs, check-size, jq plugin.json + hooks.json, shellcheck"
 
 # Gate the imported `release` recipe depends on
 prerelease: precommit
