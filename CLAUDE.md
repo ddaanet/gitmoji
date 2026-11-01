@@ -24,8 +24,6 @@ repo to edit the hook scripts, materializer, or commands.
   harnesses driven by the `just test-*` recipes
 - `docs/design.md` — living rationale for every design decision.
   States what the plugin *is*. Update when design choices change.
-- `docs/changelog.md` — index of write-time records, newest first,
-  one line per entry. Bodies live in `docs/changelog/YYYY-MM-DD-slug.md`.
 - `plans/` — specs and implementation plans. Prospective content
   only; `docs/` holds what is true now.
 
