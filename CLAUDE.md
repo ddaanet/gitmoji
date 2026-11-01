@@ -11,11 +11,11 @@ repo to edit the hook scripts, materializer, or commands.
 - `hooks/hooks.json` — SessionStart hook that runs
   `session-materialize.sh`
 - `scripts/gitmoji.sh` — commit-msg hook body (copied per-repo into
-  `.git/hooks/` by the materializer)
+  the repo's hooks dir by the materializer)
 - `scripts/gitmoji.cfg` — prefix → emoji mapping (bash associative
   array, sourced by `gitmoji.sh`)
 - `scripts/commit-msg.template` — marker-tagged wrapper, copied
-  verbatim into `.git/hooks/commit-msg`
+  verbatim into `commit-msg` in the repo's hooks dir
 - `scripts/session-materialize.sh` — runs on every SessionStart;
   installs/refreshes the per-repo hook files unconditionally
 - `scripts/uninstall-hook.sh` — removes the marker-tagged hook
@@ -42,7 +42,7 @@ via `/plugin install`, `/plugin uninstall`, the `/plugins` TUI, or
 direct hand-edit of `.claude/settings.json`. The plugin's scripts
 **never** write `enabledPlugins`.
 
-The per-repo `.git/hooks/` files are a cache, regenerated on every
+The per-repo hook files are a cache, regenerated on every
 SessionStart from the plugin version running in that session. The
 plugin owns no opt-in flag of its own.
 
@@ -51,8 +51,8 @@ plugin owns no opt-in flag of its own.
 Plugin install is implicit: SessionStart fires when the plugin is
 loaded, and the materializer installs the hook. Plugin disable has
 no counterpart event — when the plugin stops being loaded, no
-plugin code runs to clean up. The hook files persist in
-`.git/hooks/` until something explicitly removes them.
+plugin code runs to clean up. The hook files persist in the repo's
+hooks dir until something explicitly removes them.
 
 The plugin therefore ships `/gitmoji:uninstall` (slash command) and
 the equivalent `bash ${CLAUDE_PLUGIN_ROOT}/scripts/uninstall-hook.sh`
@@ -66,8 +66,10 @@ shell entry point. Users are documented to run one of these
   plugin is enabled here.
 - The hooks dir is `$(git rev-parse --git-common-dir)/hooks` made
   absolute with `cd`/`pwd` (no `--path-format`: git < 2.31), never `<toplevel>/.git/hooks` (`.git` is
-  a file in worktrees and submodules). With `core.hooksPath` set the
-  materializer installs nothing; the uninstaller still targets the
+  a file in worktrees and submodules). Where `core.hooksPath` (any
+  scope) moves git's hooks dir (`git rev-parse --git-path hooks`)
+  away from it, the materializer installs nothing; one naming the
+  default dir installs as usual. The uninstaller always targets the
   common hooks dir. See `docs/design.md` → "Where the hook is
   installed".
 - The per-repo `commit-msg` wrapper must carry the

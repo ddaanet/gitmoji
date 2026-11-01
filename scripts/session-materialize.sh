@@ -5,7 +5,8 @@
 # enabledPlugins). When this script runs, the plugin is enabled here,
 # so install unconditionally; never tear down. Refuses to overwrite a
 # foreign commit-msg without the `gitmoji-plugin-installed` marker, and
-# installs nothing where core.hooksPath is set. Idempotent.
+# installs nothing where core.hooksPath moves git's hooks dir
+# elsewhere. Idempotent.
 #
 # Output protocol:
 # - stderr: human-readable line including the target path (kept for
@@ -28,7 +29,9 @@ fi
 # file in both, so "<toplevel>/.git/hooks" is not a path there.
 # rev-parse prints the common dir relative to the cwd or absolute;
 # resolve it with cd/pwd rather than --path-format (git >= 2.31).
-hooks_dir="$(cd "$project_dir" && CDPATH='' cd -- "$(git rev-parse --git-common-dir)" && pwd)/hooks"
+# Physical (-P), so the core.hooksPath comparison below is not fooled
+# by a symlink on one side.
+hooks_dir="$(cd "$project_dir" && CDPATH='' cd -- "$(git rev-parse --git-common-dir)" && pwd -P)/hooks"
 target="$hooks_dir/commit-msg"
 marker="gitmoji-plugin-installed"
 
@@ -52,15 +55,23 @@ emit_hook_output() {
         "$(json_escape "$system_msg")"
 }
 
-# core.hooksPath (husky, lefthook) moves git's hooks elsewhere, usually
-# into a checked-in directory another tool owns. Installing in
-# $hooks_dir would be dead code, and writing there is not ours to do.
-if [[ -n "$(git -C "$project_dir" config --get core.hooksPath || true)" ]]; then
-    echo "gitmoji: core.hooksPath is set; leaving this repository's hooks alone" >&2
-    emit_hook_output \
-        "gitmoji: repository uses core.hooksPath — plugin hook not installed" \
-        "This repository runs its own git hooks, so the gitmoji commit-msg hook is not installed and nothing adds emoji to commit messages. Follow this repository's own commit-message convention."
-    exit 0
+# core.hooksPath, at any scope, can move git's hooks dir away from
+# $hooks_dir: husky and lefthook point it at a checked-in directory
+# another tool owns, and an empty value leaves the hooks dir at the
+# worktree root. A hook in $hooks_dir would then never fire, and the
+# other dir is not ours to write. A hooksPath naming $hooks_dir itself
+# only pins the default, so install as usual. Unset, git's hooks dir
+# is $hooks_dir by definition (it may not exist yet, so do not cd).
+if git -C "$project_dir" config --get core.hooksPath >/dev/null; then
+    git_hooks_dir="$(cd "$project_dir" && CDPATH='' cd -- "$(git rev-parse --git-path hooks)" 2>/dev/null && pwd -P)" \
+        || git_hooks_dir=""
+    if [[ "$git_hooks_dir" != "$hooks_dir" ]]; then
+        echo "gitmoji: core.hooksPath moves git's hooks away from $hooks_dir; not installing" >&2
+        emit_hook_output \
+            "gitmoji: core.hooksPath moves git's hooks elsewhere — plugin hook not installed" \
+            "The gitmoji commit-msg hook is not installed here, so nothing adds emoji to commit messages. Follow this repository's own commit-message convention."
+        exit 0
+    fi
 fi
 
 mkdir -p "$hooks_dir"

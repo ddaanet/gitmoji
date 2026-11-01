@@ -2,8 +2,7 @@
 # Integration test: /gitmoji:uninstall must remove the marker-tagged
 # hook files from .git/hooks/ without modifying .claude/settings.json.
 # The slash command shells to scripts/uninstall-hook.sh with
-# dangerouslyDisableSandbox: true (auto-approved by the auto-mode
-# classifier for plugin scripts writing .git/hooks/).
+# dangerouslyDisableSandbox: true.
 set -euo pipefail
 
 plugin_root="$(cd "$(dirname "$0")/.." && pwd)"

@@ -64,9 +64,11 @@ SessionStart hook then installs `.git/hooks/commit-msg` in every
 repo you open in Claude Code, so commit messages get rewritten
 everywhere. In a linked worktree the hook goes to the main repo's
 `.git/hooks/`, shared by all its worktrees; a submodule gets its own
-under the superproject's `.git/modules/<name>/hooks/`. A repo that
-sets `core.hooksPath` (husky, lefthook) runs its own hooks, so the
-plugin installs nothing there and tells the agent so.
+under the superproject's `.git/modules/<name>/hooks/`. Where
+`core.hooksPath`, set at any scope (repo or your global git config),
+points git's hooks somewhere else (husky, lefthook), the plugin
+installs nothing and tells the agent so; a `core.hooksPath` that
+names the default hooks dir itself changes nothing.
 
 ### Per-repo opt-in (team-shared)
 
@@ -110,8 +112,10 @@ To remove the hook from one repo:
 
 This removes the marker-tagged hook files from the repository's
 hooks directory (`.git/hooks/`, or the main repo's in a linked
-worktree). It does **not** touch `enabledPlugins` — you control
-that via `/plugin uninstall` or hand-edit.
+worktree). Worktrees of a repo share that hook, so uninstalling in
+one removes it for all of them. It does **not** touch
+`enabledPlugins` — you control that via `/plugin uninstall` or
+hand-edit.
 
 **Important:** Run `/gitmoji:uninstall` in each opted-in repo
 *before* running `/plugin uninstall gitmoji@ddaanet`. Once the
@@ -124,7 +128,7 @@ only do this if you're sure those files came from gitmoji).
 
 ## Safety
 
-`.git/hooks/` files are treated as a cache, not state. The materializer
+The hook files are treated as a cache, not state. The materializer
 only touches files carrying a `gitmoji-plugin-installed` marker — an
 existing `commit-msg` hook without the marker is left alone and the
 materializer prints a notice so you can move it manually.

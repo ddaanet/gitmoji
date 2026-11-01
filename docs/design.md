@@ -76,9 +76,9 @@ On every Claude Code session in a repo where the plugin is enabled,
 
 1. Locates the repo from `${CLAUDE_PROJECT_DIR}`.
 2. If not inside a git repo: silent exit 0.
-3. If `core.hooksPath` is set: install and write nothing, emit a
-   status line and agent context saying so, exit 0 (see "Where the
-   hook is installed").
+3. If `core.hooksPath` moves git's hooks dir away from `<hooks dir>`:
+   install and write nothing, emit a status line and agent context
+   saying so, exit 0 (see "Where the hook is installed").
 4. If `<hooks dir>/commit-msg` exists without the
    `gitmoji-plugin-installed` marker: leave it in place, emit a
    status line and agent context, exit 0 (refuse to clobber an
@@ -111,14 +111,18 @@ enable it. A submodule has its own
 git dir under the superproject's `.git/modules/<name>`, so it gets
 its own hook files there and the superproject's are untouched.
 
-A repo with `core.hooksPath` set (husky, lefthook) is treated as
-running its own hooks. Git no longer reads the default hooks dir
-there, so a hook installed in it would never fire while the agent
-was told it adds the emoji. The path the setting names is usually a
-checked-in directory owned by another tool, which is not the
-plugin's to write to. The plugin therefore installs nothing, and
-the agent context says that nothing adds emoji, so the agent
-follows the repo's own commit-message convention.
+`core.hooksPath`, set at any scope (repo, user or system), moves
+git's hooks dir to the path it names; the materializer compares
+`git rev-parse --git-path hooks`, resolved the same way, against
+`<hooks dir>`. Where they differ, git no longer reads `<hooks dir>`,
+so a hook installed there would never fire while the agent was told
+it adds the emoji. The other path is usually a checked-in directory
+owned by another tool (husky, lefthook), which is not the plugin's
+to write to, and an empty value leaves git looking at the worktree
+root. The plugin therefore installs nothing, and the agent context
+says that nothing adds emoji, so the agent follows the repo's own
+commit-message convention. Where the setting names `<hooks dir>`
+itself, it only pins the default, and the plugin installs as usual.
 
 The uninstaller resolves the same common hooks dir and ignores
 `core.hooksPath`. That dir is the only place the plugin ever
@@ -127,8 +131,8 @@ still removable.
 
 Per-repo hook files are thus a **cache**, regenerated from the
 plugin version running in the current session. Plugin upgrades
-propagate automatically: the next SessionStart rewrites
-`.git/hooks/` from the new version.
+propagate automatically: the next SessionStart rewrites the hooks
+dir from the new version.
 
 The script never tears down. The plugin has no event for "I was
 disabled," so cleanup is a user-explicit action (see "The disable
@@ -139,7 +143,7 @@ asymmetry" below).
 Plugin install is implicit (SessionStart side-effect of the plugin
 being enabled). Plugin disable/uninstall has no counterpart event
 in the plugin's namespace — when the plugin stops being loaded, no
-plugin code runs to clean up. The hook files in `.git/hooks/`
+plugin code runs to clean up. The hook files in the repo's hooks dir
 therefore persist after `/plugin uninstall` or scope-level disable,
 and git keeps running them.
 
@@ -163,10 +167,12 @@ plugin cache lingers) or by removing the three hook files manually.
   current plugin version on every session. No manual per-repo action.
 - **Transparent.** Users never see the mechanics — they enable the
   plugin in a scope and the hook appears.
-- **Safe when project-local plugin versions differ.** Each repo's
-  `.git/hooks/` are rewritten only by sessions opened on that repo,
-  using whichever plugin version that session sees. Repos do not share
-  any state, so mixed versions across repos never conflict.
+- **Safe when project-local plugin versions differ.** A repo's hook
+  files are rewritten only by sessions opened on that repo, using
+  whichever plugin version that session sees, so mixed versions
+  across repos never conflict. Linked worktrees of one repo share
+  the hook files: the last session to start in any of them writes
+  its version for all.
 - **Git-tracked opt-in.** Checking `enabledPlugins["gitmoji@ddaanet"]
   = true` into a repo's `.claude/settings.json` makes the hook
   travel with the repo; fresh clones auto-materialize on first
@@ -263,9 +269,8 @@ manifest JSON, but that is a development concern only.
 - **`scripts/gitmoji.sh`** / **`scripts/gitmoji.cfg`**: the hook
   body and prefix mapping. Source of truth for both.
 - **`scripts/commit-msg.template`**: the marker-tagged
-  `commit-msg` wrapper. Copied verbatim into
-  `.git/hooks/commit-msg` by the materializer and by manual
-  setups. Existing as a real file lets the materializer `cp` it
+  `commit-msg` wrapper. Copied verbatim into `commit-msg` in the
+  repo's hooks dir by the materializer and by manual setups. Existing as a real file lets the materializer `cp` it
   without retyping shell metacharacters.
 
 ## Relationship to upstream devddaanet

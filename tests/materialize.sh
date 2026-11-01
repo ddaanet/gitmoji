@@ -3,9 +3,15 @@
 # commit-msg hook unconditionally when run inside a git repo, with
 # NO settings.json flag present. Refuses to clobber a non-marker
 # commit-msg. Silent no-op outside a git repo. Installs into the
-# common hooks dir for linked worktrees and submodules; leaves repos
-# with core.hooksPath alone.
+# common hooks dir for linked worktrees and submodules; installs
+# nothing where core.hooksPath moves git's hooks elsewhere, and installs
+# as usual where it pins the default dir.
 set -euo pipefail
+
+# Isolate every git call, the materializer's included, from the
+# user's and the system git config: a global core.hooksPath or
+# commit.gpgsign would otherwise decide these cases.
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 
 plugin_root="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -33,11 +39,28 @@ assert_act_context() {
     esac
 }
 
-# Make an empty commit with a fixed identity (hermetic: no reliance on
-# the user's git config).
+# Make an empty commit with a fixed identity (the isolated config
+# above supplies none).
 commit_empty() {
     git -C "$1" -c user.name="gitmoji test" -c user.email=test@example.com \
         commit -q --allow-empty -m "feat: seed"
+}
+
+# core.hooksPath moves git's hooks away from the default dir: the
+# materializer installs nothing and tells the agent nothing adds emoji.
+# Its stderr names the default dir it left alone.
+assert_hookspath_skip() {
+    local label="$1" dir="$2" out="$3" err="$4" want_err
+    case "$out" in
+        *'"systemMessage":"gitmoji: core.hooksPath moves git'"'"'s hooks elsewhere — plugin hook not installed"'*) ;;
+        *) fail "$label: wrong systemMessage, got: $out" ;;
+    esac
+    case "$out" in
+        *'"additionalContext":"The gitmoji commit-msg hook is not installed here, so nothing adds emoji to commit messages. Follow this repository'"'"'s own commit-message convention."'*) ;;
+        *) fail "$label: wrong additionalContext, got: $out" ;;
+    esac
+    want_err="gitmoji: core.hooksPath moves git's hooks away from $(cd "$dir/.git" && pwd -P)/hooks; not installing"
+    [ "$err" = "$want_err" ] || fail "$label: wrong stderr, got: $err"
 }
 
 # --- Scenario 1: fresh git repo, no settings.json flag.
@@ -213,8 +236,8 @@ for f in commit-msg gitmoji.sh gitmoji.cfg; do
     [ ! -e "$case7/.git/hooks/$f" ] || fail "case7: $f leaked into the superproject's hooks dir"
 done
 
-# --- Scenario 8: core.hooksPath set (husky, lefthook). The repo runs
-# its own hooks; install nothing, write nothing, say so.
+# --- Scenario 8: core.hooksPath points at another tool's directory
+# (husky, lefthook). Install nothing, write nothing, say so.
 case8="$scratch_root/case8"
 mkdir -p "$case8"
 git -C "$case8" init -q
@@ -223,16 +246,7 @@ case8_before="$(ls -A "$case8/.git/hooks")"
 
 case8_out="$(CLAUDE_PROJECT_DIR="$case8" bash "$plugin_root/scripts/session-materialize.sh" 2>"$scratch_root/case8.err")" \
     || fail "case8: materializer exited non-zero with core.hooksPath set"
-case "$case8_out" in
-    *'"systemMessage":"gitmoji: repository uses core.hooksPath — plugin hook not installed"'*) ;;
-    *) fail "case8: wrong systemMessage, got: $case8_out" ;;
-esac
-case "$case8_out" in
-    *'"additionalContext":"This repository runs its own git hooks, so the gitmoji commit-msg hook is not installed and nothing adds emoji to commit messages. Follow this repository'"'"'s own commit-message convention."'*) ;;
-    *) fail "case8: wrong additionalContext, got: $case8_out" ;;
-esac
-[ "$(cat "$scratch_root/case8.err")" = "gitmoji: core.hooksPath is set; leaving this repository's hooks alone" ] \
-    || fail "case8: wrong stderr, got: $(cat "$scratch_root/case8.err")"
+assert_hookspath_skip case8 "$case8" "$case8_out" "$(cat "$scratch_root/case8.err")"
 [ "$(ls -A "$case8/.git/hooks")" = "$case8_before" ] || fail "case8: .git/hooks changed"
 [ ! -e "$case8/.husky" ] || fail "case8: materializer created .husky"
 
@@ -245,6 +259,42 @@ cp "$plugin_root/scripts/commit-msg.template" "$case8/.git/hooks/commit-msg"
     || fail "case9: uninstaller exited non-zero with core.hooksPath set"
 for f in commit-msg gitmoji.sh gitmoji.cfg; do
     [ ! -e "$case8/.git/hooks/$f" ] || fail "case9: uninstaller left $f behind"
+done
+
+# --- Scenario 10: core.hooksPath pins the default hooks dir by absolute
+# path (tests/git-states.sh does this to shadow a global hooksPath).
+# Git still reads that dir, so the hook installs there as usual.
+case10="$scratch_root/case10"
+mkdir -p "$case10/.git/hooks"
+git -C "$case10" init -q
+git -C "$case10" config core.hooksPath "$case10/.git/hooks"
+
+case10_out="$(CLAUDE_PROJECT_DIR="$case10" bash "$plugin_root/scripts/session-materialize.sh" 2>/dev/null)" \
+    || fail "case10: materializer exited non-zero with core.hooksPath pinning the default dir"
+assert_act_context case10 "$case10_out"
+case "$case10_out" in
+    *'"systemMessage":"gitmoji: installed commit-msg hook"'*) ;;
+    *) fail "case10: expected 'installed' systemMessage, got: $case10_out" ;;
+esac
+for f in commit-msg gitmoji.sh gitmoji.cfg; do
+    [ -f "$case10/.git/hooks/$f" ] || fail "case10: $f not installed in the pinned default dir"
+done
+
+# --- Scenario 11: empty core.hooksPath. Git then looks for hooks at
+# the worktree root, not in the default dir, so install nothing there
+# or anywhere else.
+case11="$scratch_root/case11"
+mkdir -p "$case11"
+git -C "$case11" init -q
+git -C "$case11" config core.hooksPath ""
+case11_before="$(ls -A "$case11/.git/hooks")"
+
+case11_out="$(CLAUDE_PROJECT_DIR="$case11" bash "$plugin_root/scripts/session-materialize.sh" 2>"$scratch_root/case11.err")" \
+    || fail "case11: materializer exited non-zero with an empty core.hooksPath"
+assert_hookspath_skip case11 "$case11" "$case11_out" "$(cat "$scratch_root/case11.err")"
+[ "$(ls -A "$case11/.git/hooks")" = "$case11_before" ] || fail "case11: .git/hooks changed"
+for f in commit-msg gitmoji.sh gitmoji.cfg; do
+    [ ! -e "$case11/$f" ] || fail "case11: $f written to the worktree root"
 done
 
 echo "PASS"
