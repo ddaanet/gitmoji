@@ -51,8 +51,8 @@ test msg="feat: add a thing":
     set -euo pipefail
     tmp=$(mktemp)
     trap 'rm -f "$tmp" "$tmp.tmp"' EXIT
-    echo "{{msg}}" > "$tmp"
-    echo "input:  {{msg}}"
+    printf '%s\n' {{ quote(msg) }} > "$tmp"
+    printf 'input:  %s\n' {{ quote(msg) }}
     bash scripts/gitmoji.sh "$tmp" || { echo "hook failed"; exit 1; }
     echo "output: $(cat "$tmp")"
 

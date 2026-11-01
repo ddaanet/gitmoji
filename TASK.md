@@ -1,0 +1,3 @@
+## Current task
+
+Work through the briefs in `inbox/`, starting with `inbox/brief-session-context-states-the-act.md`: the gitmoji SessionStart additionalContext describes the conventional-prefix rewrite in a way that leads agents to write the emoji into commit messages themselves. Read the brief first, then the context text emitted by `scripts/session-materialize.sh` and its design rationale in `docs/design.md`, and rewrite the message so it states the act an agent should take (write a plain conventional prefix) rather than narrating what the hook does. Cover it with a test in the materializer suite if the text is asserted there.
