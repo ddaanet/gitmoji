@@ -28,7 +28,7 @@ import 'plugin-dev/release.just'
 _default:
     @just --list
 
-# Lint manifests + hooks.json, run shellcheck on scripts
+# check-refs + check-size, lint manifests + hooks.json, shellcheck scripts
 precommit: check-refs check-size
     jq . .claude-plugin/plugin.json > /dev/null
     jq . hooks/hooks.json > /dev/null

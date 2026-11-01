@@ -66,11 +66,22 @@ On every Claude Code session in a repo where the plugin is enabled,
 1. Resolves the repo root from `${CLAUDE_PROJECT_DIR}`.
 2. If not inside a git repo: silent exit 0.
 3. If `.git/hooks/commit-msg` exists without the
-   `gitmoji-plugin-installed` marker: print a warning, exit 0
-   (refuse to clobber an unrelated user hook).
+   `gitmoji-plugin-installed` marker: leave it in place, emit a
+   status line and agent context, exit 0 (refuse to clobber an
+   unrelated user hook).
 4. Otherwise: copy `gitmoji.sh`, `gitmoji.cfg`, and
    `commit-msg.template` from `${CLAUDE_PLUGIN_ROOT}/scripts/`
-   into `.git/hooks/`, `chmod +x` the executables, log a line.
+   into `.git/hooks/`, `chmod +x` the executables, and emit a
+   status line (installed / refreshed / already current) plus
+   agent context.
+
+The agent context (`additionalContext`) states the commit-message
+form to write: a plain conventional prefix, no emoji, with the hook
+adding the emoji. It does not describe the rewrite, because an agent
+imitates the emoji-prefixed `git log` it already sees. The text is
+the same in every installing state and carries no uninstall pointer.
+For a foreign hook it only directs the agent to read that hook: no
+offer to remove it and no marker name.
 
 Per-repo hook files are thus a **cache**, regenerated from the
 plugin version running in the current session. Plugin upgrades
@@ -193,8 +204,7 @@ manifest JSON, but that is a development concern only.
   invokes `session-materialize.sh`.
 - **`scripts/session-materialize.sh`**: install-or-refresh entry
   point. Runs on every SessionStart when the plugin is enabled in
-  the current scope. Never tears down. Idempotent. ~30 lines, no
-  jq.
+  the current scope. Never tears down. Idempotent. No jq.
 - **`scripts/uninstall-hook.sh`**: removes the marker-tagged hook
   files from the current repo. Backs both `/gitmoji:uninstall`
   and `just uninstall`. Idempotent. Runnable from any shell —

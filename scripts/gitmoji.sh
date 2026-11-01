@@ -47,9 +47,11 @@ list_prefixes() {
     printf '%s\n' "${!gitmoji[@]}" | sort | sed 's/^/  /'
 }
 
-# An emoji-led subject means the writer copied the rewritten form from
-# git log. Emoji are 4-byte UTF-8 (lead byte f0) or sit in U+2600-27BF
-# (e2 98..9e); accented letters and punctuation fall outside both.
+# A leading emoji the loop above did not accept: one the hook does not
+# map, or a mapped one typed without its variation selector. The byte
+# test is approximate: it takes a 4-byte UTF-8 lead (f0) or U+2600-27BF
+# (e2 98..9e), so accented letters and punctuation fall through, as do
+# BMP emoji outside that block, which get the generic rejection below.
 starts_with_emoji() {
     local b
     b="$(printf '%s' "$first_line" | head -c 2 | od -An -tx1 | tr -d ' \n')"
