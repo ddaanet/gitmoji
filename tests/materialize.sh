@@ -15,14 +15,31 @@ fail() {
     exit 1
 }
 
+# The additionalContext must state the form to write (a plain
+# conventional prefix), not narrate the rewrite: an agent shown the
+# rewrite imitates the emoji-prefixed git log. Same act in every
+# installing state; no removal pointer in the agent channel.
+assert_act_context() {
+    local label="$1" out="$2"
+    case "$out" in
+        *'"additionalContext":"Start each commit message with a conventional-commit prefix'*'feat:'*'and no emoji; the gitmoji hook adds the emoji on commit."'*) ;;
+        *) fail "$label: context does not state the prefix act, got: $out" ;;
+    esac
+    case "$out" in
+        *"rewritten"*) fail "$label: context narrates the rewrite" ;;
+        *"uninstall"*) fail "$label: context offers uninstall to the agent" ;;
+    esac
+}
+
 # --- Scenario 1: fresh git repo, no settings.json flag.
 # The new materializer must install regardless of settings.
 case1="$scratch_root/case1"
 mkdir -p "$case1"
 git -C "$case1" init -q
 
-CLAUDE_PROJECT_DIR="$case1" bash "$plugin_root/scripts/session-materialize.sh" \
+case1_out="$(CLAUDE_PROJECT_DIR="$case1" bash "$plugin_root/scripts/session-materialize.sh" 2>/dev/null)" \
     || fail "case1: materializer exited non-zero on fresh repo"
+assert_act_context case1 "$case1_out"
 
 [ -f "$case1/.git/hooks/commit-msg" ]   || fail "case1: commit-msg not installed"
 [ -x "$case1/.git/hooks/commit-msg" ]   || fail "case1: commit-msg not executable"
@@ -47,8 +64,9 @@ cat > "$case2/.git/hooks/commit-msg" <<'EOF'
 EOF
 chmod +x "$case2/.git/hooks/commit-msg"
 
-CLAUDE_PROJECT_DIR="$case2" bash "$plugin_root/scripts/session-materialize.sh" \
+case2_out="$(CLAUDE_PROJECT_DIR="$case2" bash "$plugin_root/scripts/session-materialize.sh" 2>/dev/null)" \
     || fail "case2: materializer exited non-zero on marker-tagged hook"
+assert_act_context case2 "$case2_out"
 
 # After refresh, content should match the template verbatim.
 diff "$case2/.git/hooks/commit-msg" "$plugin_root/scripts/commit-msg.template" \
@@ -105,6 +123,7 @@ case "$current_out" in
     *'"systemMessage":"gitmoji: commit-msg hook already current"'*) ;;
     *) fail "case4_current: expected 'already current' systemMessage, got: $current_out" ;;
 esac
+assert_act_context case4_current "$current_out"
 
 # --- Scenario 5: outside a git repo. Silent exit 0.
 # scratch_root sits inside the plugin's own git repo, so block git's

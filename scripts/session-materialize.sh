@@ -13,8 +13,7 @@
 # - stdout: SessionStart hook JSON with `systemMessage` (one-line
 #   status hint surfaced by Claude Code) and
 #   `hookSpecificOutput.additionalContext` (added to Claude's
-#   session context so the agent knows what the hook does in this
-#   repo).
+#   session context: the commit-message form the agent should write).
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
@@ -79,23 +78,21 @@ chmod +x "$hooks_dir/gitmoji.sh"
 cp "$script_dir/commit-msg.template" "$target"
 chmod +x "$target"
 
+# Same agent-facing act in every installing state: name the form to
+# write, never the rewritten output the agent already sees in git log.
+act_context="Start each commit message with a conventional-commit prefix (feat:, fix:, docs:, ...) and no emoji; the gitmoji hook adds the emoji on commit."
+
 case "$state" in
     installed)
         echo "gitmoji: installed commit-msg hook at $target" >&2
-        emit_hook_output \
-            "gitmoji: installed commit-msg hook" \
-            "The gitmoji commit-msg hook was newly installed in this repository. Conventional-commit prefixes (feat:, fix:, docs:, ...) will be rewritten with emoji on commit. Run /gitmoji:uninstall to remove."
+        emit_hook_output "gitmoji: installed commit-msg hook" "$act_context"
         ;;
     updated)
         echo "gitmoji: refreshed commit-msg hook at $target" >&2
-        emit_hook_output \
-            "gitmoji: refreshed commit-msg hook" \
-            "The gitmoji commit-msg hook in this repository was refreshed to match the current plugin version."
+        emit_hook_output "gitmoji: refreshed commit-msg hook" "$act_context"
         ;;
     current)
         echo "gitmoji: commit-msg hook already current at $target" >&2
-        emit_hook_output \
-            "gitmoji: commit-msg hook already current" \
-            "gitmoji's commit-msg hook is installed in this repository. Conventional-commit prefixes are rewritten with emoji on commit."
+        emit_hook_output "gitmoji: commit-msg hook already current" "$act_context"
         ;;
 esac
