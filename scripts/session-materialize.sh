@@ -83,16 +83,9 @@ chmod +x "$target"
 act_context="Start each commit message with a conventional-commit prefix (feat:, fix:, docs:, ...) and no emoji; the gitmoji hook adds the emoji on commit."
 
 case "$state" in
-    installed)
-        echo "gitmoji: installed commit-msg hook at $target" >&2
-        emit_hook_output "gitmoji: installed commit-msg hook" "$act_context"
-        ;;
-    updated)
-        echo "gitmoji: refreshed commit-msg hook at $target" >&2
-        emit_hook_output "gitmoji: refreshed commit-msg hook" "$act_context"
-        ;;
-    current)
-        echo "gitmoji: commit-msg hook already current at $target" >&2
-        emit_hook_output "gitmoji: commit-msg hook already current" "$act_context"
-        ;;
+    installed) status="installed commit-msg hook" ;;
+    updated)   status="refreshed commit-msg hook" ;;
+    current)   status="commit-msg hook already current" ;;
 esac
+echo "gitmoji: $status at $target" >&2
+emit_hook_output "gitmoji: $status" "$act_context"
