@@ -2,8 +2,9 @@ import 'plugin-dev/release.just'
 
 # gitmoji plugin — dev recipes
 #
-# `precommit` is the gate that runs before every commit: it lints the
-# manifests + hooks.json and shellchecks the scripts.
+# `precommit` is the gate that runs before every commit: it resolves
+# doc references, enforces the file-size cap, lints the manifests +
+# hooks.json and shellchecks the scripts.
 #
 # `prerelease` is the gate the imported `release` recipe depends on.
 # Here it is exactly `precommit`; widen it if the release ever needs
