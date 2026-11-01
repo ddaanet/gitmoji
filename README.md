@@ -22,7 +22,7 @@ no-op for merge, squash, and amend messages, and leaves alone any
 message already starting with a known emoji.
 
 Invalid prefix or missing prefix → commit rejected with a listing of
-valid prefixes.
+valid prefixes and a final line stating the form to write.
 
 ### Scope
 
@@ -62,7 +62,13 @@ That enables the plugin at user scope (`~/.claude/settings.json`
 gets `enabledPlugins["gitmoji@ddaanet"] = true`). The plugin's
 SessionStart hook then installs `.git/hooks/commit-msg` in every
 repo you open in Claude Code, so commit messages get rewritten
-everywhere.
+everywhere. In a linked worktree the hook goes to the main repo's
+`.git/hooks/`, shared by all its worktrees; a submodule gets its own
+under the superproject's `.git/modules/<name>/hooks/`. Where
+`core.hooksPath`, set at any scope (repo or your global git config),
+points git's hooks somewhere else (husky, lefthook), the plugin
+installs nothing and tells the agent so; a `core.hooksPath` that
+names the default hooks dir itself changes nothing.
 
 ### Per-repo opt-in (team-shared)
 
@@ -104,22 +110,25 @@ To remove the hook from one repo:
 /gitmoji:uninstall
 ```
 
-This removes the marker-tagged hook files from `.git/hooks/`. It
-does **not** touch `enabledPlugins` — you control that via
-`/plugin uninstall` or hand-edit.
+This removes the marker-tagged hook files from the repository's
+hooks directory (`.git/hooks/`, or the main repo's in a linked
+worktree). Worktrees of a repo share that hook, so uninstalling in
+one removes it for all of them. It does **not** touch
+`enabledPlugins` — you control that via `/plugin uninstall` or
+hand-edit.
 
 **Important:** Run `/gitmoji:uninstall` in each opted-in repo
 *before* running `/plugin uninstall gitmoji@ddaanet`. Once the
 plugin is uninstalled it can no longer clean up its own hook
-files, and the persistent `.git/hooks/commit-msg` will keep
-rewriting your messages. If you've already uninstalled, fall back
-to `rm .git/hooks/{commit-msg,gitmoji.sh,gitmoji.cfg}` (skips
-the marker check — only do this if you're sure those files came
-from gitmoji).
+files, and the persistent `commit-msg` hook will keep rewriting
+your messages. If you've already uninstalled, fall back to
+`rm "$(git rev-parse --git-common-dir)"/hooks/{commit-msg,gitmoji.sh,gitmoji.cfg}`
+(works from a worktree or submodule too; skips the marker check —
+only do this if you're sure those files came from gitmoji).
 
 ## Safety
 
-`.git/hooks/` files are treated as a cache, not state. The materializer
+The hook files are treated as a cache, not state. The materializer
 only touches files carrying a `gitmoji-plugin-installed` marker — an
 existing `commit-msg` hook without the marker is left alone and the
 materializer prints a notice so you can move it manually.

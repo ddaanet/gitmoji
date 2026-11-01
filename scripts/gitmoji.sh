@@ -47,6 +47,17 @@ list_prefixes() {
     printf '%s\n' "${!gitmoji[@]}" | sort | sed 's/^/  /'
 }
 
+# Every rejection ends with the form to write, as the last line of
+# stderr: callers often pipe the output through `tail`, which keeps
+# the last lines and drops the diagnosis above them.
+reject() {
+    echo "$1" >&2
+    echo "Valid prefixes:" >&2
+    list_prefixes >&2
+    echo "Write the first line as type[(scope)][!]: description, with no emoji; the hook adds the emoji." >&2
+    exit 1
+}
+
 re_full='^([a-z]+)(\(([a-z0-9._/-]+)\))?(!)?: (.+)$'
 re_empty_scope='^[a-z]+\(\)!?: '
 
@@ -63,19 +74,11 @@ if [[ "$first_line" =~ $re_full ]]; then
         { echo "$emoji $rest"; tail -n +2 "$msg_file"; } > "$msg_file.tmp"
         mv "$msg_file.tmp" "$msg_file"
     else
-        echo "Unknown prefix '$prefix'. Valid prefixes:" >&2
-        list_prefixes >&2
-        exit 1
+        reject "Unknown prefix '$prefix'."
     fi
 elif [[ "$first_line" =~ $re_empty_scope ]]; then
     bad_prefix="${first_line%%(*}"
-    echo "Empty scope in '${bad_prefix}()'. Scope must be non-empty. Valid prefixes:" >&2
-    list_prefixes >&2
-    exit 1
+    reject "Empty scope in '${bad_prefix}()'. Fill in the scope or drop the parentheses."
 else
-    echo "Missing or malformed conventional commit prefix." >&2
-    echo "Expected: type[(scope)][!]: description" >&2
-    echo "Valid prefixes:" >&2
-    list_prefixes >&2
-    exit 1
+    reject "Missing or malformed conventional commit prefix."
 fi
