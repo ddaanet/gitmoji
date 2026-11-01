@@ -6,7 +6,8 @@ allowed-tools: Bash(bash *scripts/uninstall-hook.sh)
 Uninstall the gitmoji `commit-msg` hook from the current repository.
 Run this **before** disabling or uninstalling the gitmoji plugin — once
 the plugin stops loading, there is no SessionStart event to clean up
-after itself, and the hook files would persist in `.git/hooks/`.
+after itself, and the hook files would persist in the repository's
+hooks directory.
 
 ## Steps
 
@@ -14,10 +15,10 @@ after itself, and the hook files would persist in `.git/hooks/`.
    git repository; if not, tell the user and stop.
 
 2. Run the cleanup script with the Bash tool, passing
-   `dangerouslyDisableSandbox: true`. The script writes to
-   `.git/hooks/` which is outside the default sandbox; the auto-mode
-   classifier auto-approves the bypass for plugin scripts writing to
-   that directory.
+   `dangerouslyDisableSandbox: true`. The script deletes files in
+   the repository's hooks directory (`$(git rev-parse
+   --git-common-dir)/hooks`, the main repo's in a linked worktree),
+   which the default sandbox does not allow writing to.
 
    ```
    bash ${CLAUDE_PLUGIN_ROOT}/scripts/uninstall-hook.sh

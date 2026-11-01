@@ -26,7 +26,9 @@ fi
 # The default hooks dir, shared by every linked worktree of a repo; a
 # submodule's lives under the superproject's .git/modules. `.git` is a
 # file in both, so "<toplevel>/.git/hooks" is not a path there.
-hooks_dir="$(git -C "$project_dir" rev-parse --path-format=absolute --git-common-dir)/hooks"
+# rev-parse prints the common dir relative to the cwd or absolute;
+# resolve it with cd/pwd rather than --path-format (git >= 2.31).
+hooks_dir="$(cd "$project_dir" && CDPATH='' cd -- "$(git rev-parse --git-common-dir)" && pwd)/hooks"
 target="$hooks_dir/commit-msg"
 marker="gitmoji-plugin-installed"
 

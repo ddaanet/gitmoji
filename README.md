@@ -108,18 +108,19 @@ To remove the hook from one repo:
 /gitmoji:uninstall
 ```
 
-This removes the marker-tagged hook files from `.git/hooks/`. It
-does **not** touch `enabledPlugins` — you control that via
-`/plugin uninstall` or hand-edit.
+This removes the marker-tagged hook files from the repository's
+hooks directory (`.git/hooks/`, or the main repo's in a linked
+worktree). It does **not** touch `enabledPlugins` — you control
+that via `/plugin uninstall` or hand-edit.
 
 **Important:** Run `/gitmoji:uninstall` in each opted-in repo
 *before* running `/plugin uninstall gitmoji@ddaanet`. Once the
 plugin is uninstalled it can no longer clean up its own hook
-files, and the persistent `.git/hooks/commit-msg` will keep
-rewriting your messages. If you've already uninstalled, fall back
-to `rm .git/hooks/{commit-msg,gitmoji.sh,gitmoji.cfg}` (skips
-the marker check — only do this if you're sure those files came
-from gitmoji).
+files, and the persistent `commit-msg` hook will keep rewriting
+your messages. If you've already uninstalled, fall back to
+`rm "$(git rev-parse --git-common-dir)"/hooks/{commit-msg,gitmoji.sh,gitmoji.cfg}`
+(works from a worktree or submodule too; skips the marker check —
+only do this if you're sure those files came from gitmoji).
 
 ## Safety
 

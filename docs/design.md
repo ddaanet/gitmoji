@@ -99,12 +99,15 @@ offer to remove it and no marker name.
 
 ### Where the hook is installed
 
-`<hooks dir>` is `$(git rev-parse --path-format=absolute
---git-common-dir)/hooks`, git's default hooks directory. It is not
+`<hooks dir>` is `$(git rev-parse --git-common-dir)/hooks`, made
+absolute, git's default hooks directory. It is not
 `<toplevel>/.git/hooks`: in a linked worktree and in a submodule
 `.git` is a file, so that path does not exist. The common dir is
 shared by every worktree of a repo, so one installation covers them
-all and the hook files have a single owner. A submodule has its own
+all and the hook files have a single owner. A session in any
+worktree where the plugin is enabled therefore installs the hook for
+every worktree of the repo, including ones whose settings do not
+enable it. A submodule has its own
 git dir under the superproject's `.git/modules/<name>`, so it gets
 its own hook files there and the superproject's are untouched.
 
@@ -188,11 +191,7 @@ plugin cache lingers) or by removing the three hook files manually.
   stating the act: write the first line as
   `type[(scope)][!]: description`, with no emoji, because the hook adds
   the emoji. The line is identical for every rejection and comes last
-  so that output truncated with `| tail` keeps it. Agents copy the
-  emoji-led subjects they see in `git log`: in session logs, 6 of 22
-  emoji-led subjects rejected by a diagnosis-only error were retried
-  with a swapped emoji or re-sent unchanged, the re-sends where
-  `| tail` had cut the diagnosis. The hook does not
+  so that output truncated with `| tail` keeps it. The hook does not
   try to recognise emoji-led subjects, since the act line serves every
   malformed subject alike.
 - **Scope rendering.** A parenthesised scope is preserved by
