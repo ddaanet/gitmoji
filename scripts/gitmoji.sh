@@ -83,14 +83,13 @@ elif [[ "$first_line" =~ $re_empty_scope ]]; then
     echo "Empty scope in '${bad_prefix}()'. Scope must be non-empty. Valid prefixes:" >&2
     list_prefixes >&2
     exit 1
-elif starts_with_emoji; then
-    echo "Commit subject starts with an emoji. Write a conventional prefix instead: type[(scope)][!]: description. The hook adds the emoji." >&2
-    echo "Valid prefixes:" >&2
-    list_prefixes >&2
-    exit 1
 else
-    echo "Missing or malformed conventional commit prefix." >&2
-    echo "Expected: type[(scope)][!]: description" >&2
+    if starts_with_emoji; then
+        echo "Commit subject starts with an emoji. Write a conventional prefix instead: type[(scope)][!]: description. The hook adds the emoji." >&2
+    else
+        echo "Missing or malformed conventional commit prefix." >&2
+        echo "Expected: type[(scope)][!]: description" >&2
+    fi
     echo "Valid prefixes:" >&2
     list_prefixes >&2
     exit 1

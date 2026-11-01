@@ -58,18 +58,18 @@ if [[ -f "$target" ]] && ! grep -q "$marker" "$target" 2>/dev/null; then
     exit 0
 fi
 
-# Decide state before writing. `installed` means there was nothing
-# here; `current` means the candidate files are byte-identical to
-# what's already installed; `updated` means a marker-tagged hook is
-# present but differs from this plugin version.
+# Decide status before writing. "installed" means there was nothing
+# here; "already current" means the candidate files are byte-identical
+# to what's already installed; "refreshed" means a marker-tagged hook
+# is present but differs from this plugin version.
 if [[ ! -f "$target" ]]; then
-    state="installed"
+    status="installed commit-msg hook"
 elif cmp -s "$script_dir/commit-msg.template" "$target" \
     && cmp -s "$script_dir/gitmoji.sh" "$hooks_dir/gitmoji.sh" \
     && cmp -s "$script_dir/gitmoji.cfg" "$hooks_dir/gitmoji.cfg"; then
-    state="current"
+    status="commit-msg hook already current"
 else
-    state="updated"
+    status="refreshed commit-msg hook"
 fi
 
 cp "$script_dir/gitmoji.sh"  "$hooks_dir/gitmoji.sh"
@@ -82,10 +82,5 @@ chmod +x "$target"
 # write, never the rewritten output the agent already sees in git log.
 act_context="Start each commit message with a conventional-commit prefix (feat:, fix:, docs:, ...) and no emoji; the gitmoji hook adds the emoji on commit."
 
-case "$state" in
-    installed) status="installed commit-msg hook" ;;
-    updated)   status="refreshed commit-msg hook" ;;
-    current)   status="commit-msg hook already current" ;;
-esac
 echo "gitmoji: $status at $target" >&2
 emit_hook_output "gitmoji: $status" "$act_context"
