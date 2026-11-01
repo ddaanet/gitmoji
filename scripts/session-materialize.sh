@@ -28,8 +28,9 @@ hooks_dir="$repo_root/.git/hooks"
 target="$hooks_dir/commit-msg"
 marker="gitmoji-plugin-installed"
 
-# Bash JSON string escape. Hook content is plugin-controlled, but the
-# target path is user-controlled (could contain quotes/backslashes).
+# Bash JSON string escape for backslash, ", \n, \r and \t only. Callers pass
+# constant strings, never variable data such as $target, so this is
+# not safe for arbitrary paths containing other control characters.
 json_escape() {
     local s="$1"
     s="${s//\\/\\\\}"

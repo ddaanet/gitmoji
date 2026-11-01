@@ -40,6 +40,10 @@ git -C "$case1" init -q
 case1_out="$(CLAUDE_PROJECT_DIR="$case1" bash "$plugin_root/scripts/session-materialize.sh" 2>/dev/null)" \
     || fail "case1: materializer exited non-zero on fresh repo"
 assert_act_context case1 "$case1_out"
+case "$case1_out" in
+    *'"systemMessage":"gitmoji: installed commit-msg hook"'*) ;;
+    *) fail "case1: expected 'installed' systemMessage, got: $case1_out" ;;
+esac
 
 [ -f "$case1/.git/hooks/commit-msg" ]   || fail "case1: commit-msg not installed"
 [ -x "$case1/.git/hooks/commit-msg" ]   || fail "case1: commit-msg not executable"
@@ -67,6 +71,10 @@ chmod +x "$case2/.git/hooks/commit-msg"
 case2_out="$(CLAUDE_PROJECT_DIR="$case2" bash "$plugin_root/scripts/session-materialize.sh" 2>/dev/null)" \
     || fail "case2: materializer exited non-zero on marker-tagged hook"
 assert_act_context case2 "$case2_out"
+case "$case2_out" in
+    *'"systemMessage":"gitmoji: refreshed commit-msg hook"'*) ;;
+    *) fail "case2: expected 'refreshed' systemMessage, got: $case2_out" ;;
+esac
 
 # After refresh, content should match the template verbatim.
 diff "$case2/.git/hooks/commit-msg" "$plugin_root/scripts/commit-msg.template" \

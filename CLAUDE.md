@@ -88,7 +88,8 @@ shell entry point. Users are documented to run one of these
 ## Testing
 
 - `just test` — runs the hook against a sample commit message.
-- `just test msg="docs: update readme"` — custom message.
+- `just test "docs: update readme"` — custom message (positional; `msg=...`
+  would be passed literally).
 - `just materialize` — runs the SessionStart materializer against
   the current repo (dev loop for `session-materialize.sh`).
 - `just uninstall` — runs the cleanup script against the current

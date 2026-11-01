@@ -41,6 +41,16 @@ via `/plugin install`, the `/plugins` TUI, or hand-edit of
 `.claude/settings.json`. The plugin's scripts never write this key
 — that's the user's job.
 
+Why there is no plugin-owned opt-in flag (for example a
+`pluginConfigs["gitmoji@ddaanet"].options.enabled` layered on top of
+a globally enabled plugin):
+
+- It duplicates `enabledPlugins`, giving two levers for one decision.
+- Setting it means editing `.claude/settings.json`, which Claude
+  Code's auto-mode classifier hard-blocks for agents.
+- A more specific override layer could silently flip it and make
+  SessionStart tear down a working hook.
+
 Three operational shapes fall out:
 
 - **User scope enabled** (`~/.claude/settings.json`
