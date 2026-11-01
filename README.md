@@ -22,7 +22,7 @@ no-op for merge, squash, and amend messages, and leaves alone any
 message already starting with a known emoji.
 
 Invalid prefix or missing prefix → commit rejected with a listing of
-valid prefixes.
+valid prefixes and a final line stating the form to write.
 
 ### Scope
 

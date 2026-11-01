@@ -152,9 +152,20 @@ plugin cache lingers) or by removing the three hook files manually.
   `type[(scope)][!]: description`, with type matching `[a-z]+` and
   scope matching `[a-z0-9._/-]+`. Mixed-case or dotted types,
   uppercase scopes, and bare-emoji subjects (`💥 msg`) are rejected
-  with a helpful message listing valid prefixes, not silently mangled.
-  Empty scope (`feat(): msg`) gets a distinct error that quotes the
+  with a message listing valid prefixes, not silently mangled. Empty
+  scope (`feat(): msg`) gets a distinct diagnosis that quotes the
   offending prefix.
+- **Every rejection ends with the form to write.** Each rejection
+  prints one diagnosis line, the valid prefixes, and a final line
+  stating the act: write the first line as
+  `type[(scope)][!]: description`, with no emoji, because the hook adds
+  the emoji. The line is identical for every rejection and comes last
+  so that output truncated with `| tail` keeps it. Agents imitate the
+  emoji-led subjects they see in `git log`; an error that only
+  diagnoses gets a swapped emoji or an unchanged re-send, while one
+  that states the act gets a conventional prefix. The hook does not
+  try to recognise emoji-led subjects, since the act line serves every
+  malformed subject alike.
 - **Scope rendering.** A parenthesised scope is preserved by
   prepending it to the description as `<scope>: …` in the rewritten
   subject, so reviewers don't lose it.

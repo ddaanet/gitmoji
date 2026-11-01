@@ -63,6 +63,8 @@ assert_skip() {
     fi
 }
 
+act_line="Write the first line as type[(scope)][!]: description, with no emoji; the hook adds the emoji."
+
 assert_reject() {
     local input="$1" want_stderr="$2" name="$3"
     total=$((total+1))
@@ -73,12 +75,20 @@ assert_reject() {
         echo "FAIL: $name (hook accepted '$input')"
         fail=$((fail+1)); return
     fi
-    if printf '%s' "$stderr" | grep -qF "$want_stderr"; then
-        echo "PASS: $name"
-    else
+    if ! printf '%s' "$stderr" | grep -qF "$want_stderr"; then
         echo "FAIL: $name (stderr missing '$want_stderr')"
         echo "  input:  $input"
         echo "  stderr: $stderr"
+        fail=$((fail+1)); return
+    fi
+    # The act is the last line, where `| tail` keeps it.
+    local last; last="$(printf '%s\n' "$stderr" | tail -n 1)"
+    if [ "$last" = "$act_line" ]; then
+        echo "PASS: $name"
+    else
+        echo "FAIL: $name (last stderr line is not the act line)"
+        echo "  input: $input"
+        echo "  last:  $last"
         fail=$((fail+1))
     fi
 }
@@ -107,11 +117,8 @@ assert_skip "✨ already done"           "skip: type emoji"
 assert_skip "✨💥 already done"         "skip: type+boom (round-trip)"
 
 # --- Rejections (each error branch).
-assert_reject "💥 break things" "starts with an emoji" "reject: bare boom names the emoji"
-assert_reject "🔥 remove dead code" "Write a conventional prefix instead" "reject: unmapped emoji names the act"
-assert_reject "☕ coffee"        "starts with an emoji" "reject: BMP symbol emoji"
-assert_reject "Écrire la doc"   "Missing or malformed" "reject: accented letter is not an emoji"
-assert_reject "… trailing"      "Missing or malformed" "reject: punctuation is not an emoji"
+assert_reject "💥 break things"    "Missing or malformed" "reject: bare boom"
+assert_reject "🔥 remove dead code" "Missing or malformed" "reject: unmapped emoji"
 assert_reject "xyz: msg"        "Unknown prefix"       "reject: unknown type"
 assert_reject "feat(): msg"     "Empty scope"          "reject: empty scope"
 assert_reject "feat()!: msg"    "Empty scope"          "reject: empty scope + bang"

@@ -47,15 +47,15 @@ list_prefixes() {
     printf '%s\n' "${!gitmoji[@]}" | sort | sed 's/^/  /'
 }
 
-# A leading emoji the loop above did not accept: one the hook does not
-# map, or a mapped one typed without its variation selector. The byte
-# test is approximate: it takes a 4-byte UTF-8 lead (f0) or U+2600-27BF
-# (e2 98..9e), so accented letters and punctuation fall through, as do
-# BMP emoji outside that block, which get the generic rejection below.
-starts_with_emoji() {
-    local b
-    b="$(printf '%s' "$first_line" | head -c 2 | od -An -tx1 | tr -d ' \n')"
-    [[ "$b" == f0* || "$b" =~ ^e29[89a-e] ]]
+# Every rejection ends with the form to write, as the last line of
+# stderr: callers often pipe the output through `tail`, which keeps
+# the last lines and drops the diagnosis above them.
+reject() {
+    echo "$1" >&2
+    echo "Valid prefixes:" >&2
+    list_prefixes >&2
+    echo "Write the first line as type[(scope)][!]: description, with no emoji; the hook adds the emoji." >&2
+    exit 1
 }
 
 re_full='^([a-z]+)(\(([a-z0-9._/-]+)\))?(!)?: (.+)$'
@@ -74,23 +74,11 @@ if [[ "$first_line" =~ $re_full ]]; then
         { echo "$emoji $rest"; tail -n +2 "$msg_file"; } > "$msg_file.tmp"
         mv "$msg_file.tmp" "$msg_file"
     else
-        echo "Unknown prefix '$prefix'. Valid prefixes:" >&2
-        list_prefixes >&2
-        exit 1
+        reject "Unknown prefix '$prefix'."
     fi
 elif [[ "$first_line" =~ $re_empty_scope ]]; then
     bad_prefix="${first_line%%(*}"
-    echo "Empty scope in '${bad_prefix}()'. Scope must be non-empty. Valid prefixes:" >&2
-    list_prefixes >&2
-    exit 1
+    reject "Empty scope in '${bad_prefix}()'."
 else
-    if starts_with_emoji; then
-        echo "Commit subject starts with an emoji. Write a conventional prefix instead: type[(scope)][!]: description. The hook adds the emoji." >&2
-    else
-        echo "Missing or malformed conventional commit prefix." >&2
-        echo "Expected: type[(scope)][!]: description" >&2
-    fi
-    echo "Valid prefixes:" >&2
-    list_prefixes >&2
-    exit 1
+    reject "Missing or malformed conventional commit prefix."
 fi
